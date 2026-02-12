@@ -245,11 +245,11 @@ worksheet.write(4, 6, "StbyH", fmtheadernum)
 date = min_date
 col = 7
 while date <= max_date:
-    worksheet.write_number(5, col, date.day, fmtheaderday)
+    worksheet.write_number(4, col, date.day, fmtheaderday)
     date = date + td(days=1)
     col += 1
 
-worksheet.set_column(0, 0, width=16)
+worksheet.set_column(0, 0, width=24)
 worksheet.set_column(1, 6, width=6)
 worksheet.set_column(7, col - 1, width=4)
 
@@ -259,7 +259,7 @@ sicklist = []
 vacationlist = []
 
 
-row = 6
+row = 5
 for name in sorted(daysums.keys()):
     total_hours = [dec0, dec0, dec0, dec0, dec0]
     for date in daysums[name]:
