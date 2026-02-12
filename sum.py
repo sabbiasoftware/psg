@@ -211,9 +211,9 @@ for e in entries:
 workbook = xlsxwriter.Workbook("sum.xlsx")
 worksheet = workbook._add_sheet("Summary")
 
-fmtheaderday = workbook.add_format({"align": "center"})
-fmtheadername = workbook.add_format({"align": "left"})
-fmtheadernum = workbook.add_format({"align": "right"})
+fmtheaderday = workbook.add_format({"align": "center", "bold": "true"})
+fmtheadername = workbook.add_format({"align": "left", "bold": "true"})
+fmtheadernum = workbook.add_format({"align": "right", "bold": "true"})
 fmtname = workbook.add_format({"align": "left"})
 fmtnum = workbook.add_format({"align": "right"})
 fmtwork = workbook.add_format({"align": "center", "bg_color": "#90ee90"})
@@ -230,23 +230,22 @@ actual_projects = "All"
 if len(cfg_projects) > 0:
     actual_projects = ", ".join(actual_projects)
 
-worksheet.write(0, 0, "Summary")
-worksheet.write(1, 0, f"Duration: {format_date(min_date)}-{format_date(max_date)}")
-worksheet.write(2, 0, f"Projects: {actual_projects}")
-worksheet.write(3, 0, f"Generated: {format_datetime(dt.now())}")
+worksheet.write(0, 0, f"Duration: {format_date(min_date)}-{format_date(max_date)}")
+worksheet.write(1, 0, f"Projects: {actual_projects}")
+worksheet.write(2, 0, f"Generated: {format_datetime(dt.now())}")
 
-worksheet.write(5, 0, "Name", fmtheadername)
-worksheet.write(5, 1, "WorkH", fmtheadernum)
-worksheet.write(5, 2, "WorkD", fmtheadernum)
-worksheet.write(5, 3, "VacaD", fmtheadernum)
-worksheet.write(5, 4, "SickD", fmtheadernum)
-worksheet.write(5, 5, "OverH", fmtheadernum)
-worksheet.write(5, 6, "StbyH", fmtheadernum)
+worksheet.write(4, 0, "Name", fmtheadername)
+worksheet.write(4, 1, "WorkH", fmtheadernum)
+worksheet.write(4, 2, "WorkD", fmtheadernum)
+worksheet.write(4, 3, "VacaD", fmtheadernum)
+worksheet.write(4, 4, "SickD", fmtheadernum)
+worksheet.write(4, 5, "OverH", fmtheadernum)
+worksheet.write(4, 6, "StbyH", fmtheadernum)
 
 date = min_date
 col = 7
 while date <= max_date:
-    worksheet.write(5, col, date.day, fmtheaderday)
+    worksheet.write_number(5, col, date.day, fmtheaderday)
     date = date + td(days=1)
     col += 1
 
@@ -260,7 +259,7 @@ sicklist = []
 vacationlist = []
 
 
-row = 8
+row = 6
 for name in sorted(daysums.keys()):
     total_hours = [dec0, dec0, dec0, dec0, dec0]
     for date in daysums[name]:
@@ -286,7 +285,7 @@ for name in sorted(daysums.keys()):
 
         if is_working_day(date):
             if hours[0:4] == [dec8, dec0, dec0, dec0]:
-                worksheet.write(row, col, "8", fmtwork)
+                worksheet.write_number(row, col, 8, fmtwork)
             elif hours[0:4] == [dec0, dec8, dec0, dec0]:
                 worksheet.write(row, col, "V", fmtvaca)
             elif hours[0:4] == [dec0, dec0, dec8, dec0]:
@@ -318,12 +317,14 @@ for name in sorted(daysums.keys()):
         col += 1
 
     worksheet.write(row, 0, name, fmtname)
-    worksheet.write(row, 1, total_hours[IWORK], fmtnum)
-    worksheet.write(row, 2, (total_hours[IWORK] - overtime_hours) // dec8, fmtnum)
-    worksheet.write(row, 3, total_hours[IVACATION] // dec8, fmtnum)
-    worksheet.write(row, 4, total_hours[ISICK] // dec8, fmtnum)
-    worksheet.write(row, 5, overtime_hours, fmtnum)
-    worksheet.write(row, 6, total_hours[ISTANDBY], fmtnum)
+    worksheet.write_number(row, 1, int(total_hours[IWORK]), fmtnum)
+    worksheet.write_number(
+        row, 2, int((total_hours[IWORK] - overtime_hours) // dec8), fmtnum
+    )
+    worksheet.write_number(row, 3, int(total_hours[IVACATION] // dec8), fmtnum)
+    worksheet.write_number(row, 4, int(total_hours[ISICK] // dec8), fmtnum)
+    worksheet.write_number(row, 5, int(overtime_hours), fmtnum)
+    worksheet.write_number(row, 6, int(total_hours[ISTANDBY]), fmtnum)
 
     if missing:
         missinglist.append(name)
