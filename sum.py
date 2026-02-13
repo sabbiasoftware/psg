@@ -1,5 +1,8 @@
 import os
+import sys
+import subprocess
 import glob
+import argparse
 
 # import subprocess
 from datetime import datetime as dt
@@ -108,27 +111,39 @@ def is_working_day(date) -> bool:
     ) or (date in cfg_workingdays)
 
 
-# ***************************
-# Read configs and input file
-# ***************************
+# ***************
+# Read input file
+# ***************
+
+parser = argparse.ArgumentParser("psg - Presence Sheet Generator")
+parser.add_argument(
+    "filename",
+    nargs="?",
+    help="Timesheet in CSV format to process. If omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder",
+)
+args = parser.parse_args()
+
+inputfilename = None
+if args.filename is not None:
+    inputfilename = args.filename
+else:
+    downloads_folder = userpaths.get_downloads()
+    raw_files = glob.glob(os.path.join(userpaths.get_downloads(), "TimesheetReport_*"))
+    if len(raw_files) == 0:
+        print("Could not find any timesheet in {}".format(downloads_folder))
+        quit()
+    inputfilename = max(raw_files, key=os.path.getctime)
+raw = read_strings(inputfilename)
+
+# ************
+# Read configs
+# ************
 
 cfg_users = read_strings(os.path.join("cfg", "users.txt"), do_strip=True, do_lower=True)
 cfg_holidays = read_dates(os.path.join("cfg", "holidays.txt"))
 cfg_weekends = read_dates(os.path.join("cfg", "weekends.txt"))
 cfg_workingdays = read_dates(os.path.join("cfg", "workingdays.txt"))
 cfg_projects = read_strings(os.path.join("cfg", "projects.txt"))
-
-
-downloads_folder = userpaths.get_downloads()
-raw_files = glob.glob(os.path.join(userpaths.get_downloads(), "TimesheetReport_*"))
-
-if len(raw_files) == 0:
-    print("Could not find any timesheet in {}".format(downloads_folder))
-    input()
-    quit()
-
-latest_raw_filename = max(raw_files, key=os.path.getctime)
-raw = read_strings(latest_raw_filename)
 
 
 # ************
@@ -365,5 +380,8 @@ for name in sorted(cfg_users):
 
 workbook.close()
 
-os.system(f"libreoffice --calc {'sum.xlsx'}")
+if sys.platform == "win32":
+    subprocess.Popen(["start", "excel", "sum.xlsx"])
+elif sys.platform == "linux":
+    subprocess.Popen(["libreoffice", "--calc", "sum.xlsx"])
 # webbrowser.open_new_tab("sum_out.html")
