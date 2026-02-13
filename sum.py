@@ -381,7 +381,8 @@ for name in sorted(cfg_users):
 workbook.close()
 
 if sys.platform == "win32":
-    subprocess.Popen(["start", "excel", "sum.xlsx"])
+    os.system("start excel sum.xlsx")
+    # subprocess.Popen(["start", "excel", "sum.xlsx"])
 elif sys.platform == "linux":
     subprocess.Popen(["libreoffice", "--calc", "sum.xlsx"])
 # webbrowser.open_new_tab("sum_out.html")
