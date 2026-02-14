@@ -18,18 +18,22 @@ import xlsxwriter
 
 
 class Entry:
-    def __init__(self, date, name, comment, project, activity, hours):
+    def __init__(self, date, email, user, approver, comment, project, activity, hours):
         self.date = date
-        self.name = name
+        self.email = email
+        self.user = user
+        self.approver = approver
         self.comment = comment
         self.project = project
         self.activity = activity
         self.hours = hours
 
     def __str__(self) -> str:
-        return "{} {} {} {} {} {}".format(
+        return "{};{};{};{};{};{};{};{}".format(
             dt.strftime(self.date, "%Y%m%d"),
-            self.name,
+            self.email,
+            self.user,
+            self.approver,
             self.comment,
             self.project,
             self.activity,
@@ -152,7 +156,9 @@ cfg_projects = read_strings(os.path.join("cfg", "projects.txt"))
 
 header = raw[0].split("\t")
 idate = header.index("Date")
-iname = header.index("Email Address")
+iemail = header.index("Email Address")
+iuser = header.index("User")
+iapprover = header.index("Level 1 Approver Name (configured)")
 icomment = header.index("Comment")
 iproject = header.index("Project")
 iprojectdescription = header.index("Project Description")
@@ -173,7 +179,7 @@ for r in raw:
     if r[0:2] == "20":
         rr = r.split("\t")
 
-        name = rr[iname][0:-14].strip().lower()
+        email = rr[iemail][0:-14].strip().lower()
 
         project_included = (
             (rr[iproject] in special_projects)
@@ -181,13 +187,15 @@ for r in raw:
             or (max([str.find(rr[iproject], p) for p in cfg_projects]) >= 0)
             or (max([str.find(rr[iprojectdescription], p) for p in cfg_projects]) >= 0)
         )
-        name_included = (len(cfg_users) == 0) or (name in cfg_users)
+        name_included = (len(cfg_users) == 0) or (email in cfg_users)
 
         if name_included and project_included:
             entries.append(
                 Entry(
                     dt.strptime(rr[idate], "%Y%m%d"),
-                    name,
+                    email,
+                    rr[iuser],
+                    rr[iapprover],
                     rr[icomment],
                     rr[iproject],
                     rr[iactivity],
@@ -199,18 +207,19 @@ for r in raw:
                     "{} {}".format(rr[iproject], rr[iprojectdescription])
                 )
 
-
 daysums = {}
 
 min_date = dt.max
 max_date = dt.min
 
 for e in entries:
-    if e.name not in daysums.keys():
-        daysums[e.name] = {}
-    if e.date not in daysums[e.name].keys():
-        daysums[e.name][e.date] = [dec0, dec0, dec0, dec0, dec0]
-    daysums[e.name][e.date][get_hour_index(e)] += e.hours
+    if e.email not in daysums.keys():
+        daysums[e.email] = {}
+        daysums[e.email]["user"] = e.user
+        daysums[e.email]["approver"] = e.approver
+    if e.date not in daysums[e.email].keys():
+        daysums[e.email][e.date] = [dec0, dec0, dec0, dec0, dec0]
+    daysums[e.email][e.date][get_hour_index(e)] += e.hours
 
     if e.date < min_date:
         min_date = e.date
@@ -227,9 +236,9 @@ workbook = xlsxwriter.Workbook("sum.xlsx")
 worksheet = workbook._add_sheet("Summary")
 
 fmtheaderday = workbook.add_format({"align": "center", "bold": "true"})
-fmtheadername = workbook.add_format({"align": "left", "bold": "true"})
+fmtheadertxt = workbook.add_format({"align": "left", "bold": "true"})
 fmtheadernum = workbook.add_format({"align": "right", "bold": "true"})
-fmtname = workbook.add_format({"align": "left"})
+fmttxt = workbook.add_format({"align": "left"})
 fmtnum = workbook.add_format({"align": "right"})
 fmtwork = workbook.add_format({"align": "center", "bg_color": "#90ee90"})
 fmtvaca = workbook.add_format({"align": "center", "bg_color": "#ffff00"})
@@ -249,24 +258,26 @@ worksheet.write(0, 0, f"Duration: {format_date(min_date)}-{format_date(max_date)
 worksheet.write(1, 0, f"Projects: {actual_projects}")
 worksheet.write(2, 0, f"Generated: {format_datetime(dt.now())}")
 
-worksheet.write(4, 0, "Name", fmtheadername)
-worksheet.write(4, 1, "WorkH", fmtheadernum)
-worksheet.write(4, 2, "WorkD", fmtheadernum)
-worksheet.write(4, 3, "VacaD", fmtheadernum)
-worksheet.write(4, 4, "SickD", fmtheadernum)
-worksheet.write(4, 5, "OverH", fmtheadernum)
-worksheet.write(4, 6, "StbyH", fmtheadernum)
+worksheet.write(4, 0, "Name", fmtheadertxt)
+worksheet.write(4, 1, "User", fmtheadertxt)
+worksheet.write(4, 2, "Approver", fmtheadertxt)
+worksheet.write(4, 3, "WorkH", fmtheadernum)
+worksheet.write(4, 4, "WorkD", fmtheadernum)
+worksheet.write(4, 5, "VacaD", fmtheadernum)
+worksheet.write(4, 6, "SickD", fmtheadernum)
+worksheet.write(4, 7, "OverH", fmtheadernum)
+worksheet.write(4, 8, "StbyH", fmtheadernum)
 
 date = min_date
-col = 7
+col = 9
 while date <= max_date:
     worksheet.write_number(4, col, date.day, fmtheaderday)
     date = date + td(days=1)
     col += 1
 
-worksheet.set_column(0, 0, width=24)
-worksheet.set_column(1, 6, width=6)
-worksheet.set_column(7, col - 1, width=4)
+worksheet.set_column(0, 2, width=24)
+worksheet.set_column(3, 8, width=8)
+worksheet.set_column(9, col - 1, width=6)
 
 missinglist = []
 overtimelist = []
@@ -275,11 +286,12 @@ vacationlist = []
 
 
 row = 5
-for name in sorted(daysums.keys()):
+for email in sorted(daysums.keys()):
     total_hours = [dec0, dec0, dec0, dec0, dec0]
-    for date in daysums[name]:
-        for h in range(0, 5):
-            total_hours[h] += daysums[name][date][h]
+    for date in daysums[email]:
+        if isinstance(date, dt):
+            for h in range(0, 5):
+                total_hours[h] += daysums[email][date][h]
 
     # if there are filter projects configured, then filter out people with 0 hours against projects
     if len(cfg_projects) > 0 and total_hours[IWORK] == 0:
@@ -290,11 +302,11 @@ for name in sorted(daysums.keys()):
     standby_hours = 0
 
     date = min_date
-    col = 7
+    col = 9
     while date <= max_date:
         hours = []
-        if date in daysums[name].keys():
-            hours = daysums[name][date]
+        if date in daysums[email].keys():
+            hours = daysums[email][date]
         else:
             hours = [dec0, dec0, dec0, dec0, dec0]
 
@@ -331,37 +343,39 @@ for name in sorted(daysums.keys()):
         date = date + td(days=1)
         col += 1
 
-    worksheet.write(row, 0, name, fmtname)
-    worksheet.write_number(row, 1, int(total_hours[IWORK]), fmtnum)
+    worksheet.write(row, 0, email, fmttxt)
+    worksheet.write(row, 1, daysums[email]["user"])
+    worksheet.write(row, 2, daysums[email]["approver"])
+    worksheet.write_number(row, 3, int(total_hours[IWORK]), fmtnum)
     worksheet.write_number(
-        row, 2, int((total_hours[IWORK] - overtime_hours) // dec8), fmtnum
+        row, 4, int((total_hours[IWORK] - overtime_hours) // dec8), fmtnum
     )
-    worksheet.write_number(row, 3, int(total_hours[IVACATION] // dec8), fmtnum)
-    worksheet.write_number(row, 4, int(total_hours[ISICK] // dec8), fmtnum)
-    worksheet.write_number(row, 5, int(overtime_hours), fmtnum)
-    worksheet.write_number(row, 6, int(total_hours[ISTANDBY]), fmtnum)
+    worksheet.write_number(row, 5, int(total_hours[IVACATION] // dec8), fmtnum)
+    worksheet.write_number(row, 6, int(total_hours[ISICK] // dec8), fmtnum)
+    worksheet.write_number(row, 7, int(overtime_hours), fmtnum)
+    worksheet.write_number(row, 8, int(total_hours[ISTANDBY]), fmtnum)
 
     if missing:
-        missinglist.append(name)
+        missinglist.append(email)
 
     if overtime_hours > dec0:
-        overtimelist.append((name, overtime_hours))
+        overtimelist.append((email, overtime_hours))
 
     if total_hours[ISICK] > dec0:
-        sicklist.append((name, total_hours[ISICK] // dec8))
+        sicklist.append((email, total_hours[ISICK] // dec8))
 
     if total_hours[IVACATION] > dec0:
-        vacationlist.append((name, total_hours[IVACATION] // dec8))
+        vacationlist.append((email, total_hours[IVACATION] // dec8))
 
     row += 1
 
 
-for name in sorted(cfg_users):
-    if name not in daysums.keys():
-        worksheet.write(row, 0, name, fmtname)
+for email in sorted(cfg_users):
+    if email not in daysums.keys():
+        worksheet.write(row, 0, email, fmttxt)
 
         date = min_date
-        col = 7
+        col = 9
         while date <= max_date:
             if is_working_day(date):
                 worksheet.write(row, col, "-", fmtno)
@@ -374,9 +388,10 @@ for name in sorted(cfg_users):
         for c in range(1, 7):
             worksheet.write(row, c, 0, fmtnum)
 
-        missinglist.append(name)
+        missinglist.append(email)
         row += 1
 
+worksheet.autofilter(4, 0, row - 1, col - 1)
 
 workbook.close()
 
