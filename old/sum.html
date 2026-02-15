@@ -1,0 +1,86 @@
+<html>
+<head>
+<title>Summary</title>
+<style>
+
+body { font-family: arial; }
+
+h1 { margin-top: 64px; }
+
+table {
+  width: max-content;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+td {
+  width: 20px;
+  font-family: arial;
+  font-size: 11px;
+  text-align: center;
+  border: solid 1px;
+  border-color: gray;
+  border-collapse: collapse;
+  padding: 2px;
+}
+
+td.name { width: 160px; text-align: left; }
+
+
+
+td.work { background-color: lightgreen ; }
+td.vacation { background-color: yellow; }
+td.sick { background-color: orchid; }
+td.notime { background-color: lightgray; }
+td.undertime { background-color: yellowgreen }
+td.overtime { background-color: orange; }
+td.question { background-color: gray; }
+td.empty { background-color: white; }
+
+td.total { width: 80px; text-align: right; }
+
+</style>
+</head>
+<body>
+
+<h1>Summary</h1>
+<p>***TITLE***</p>
+
+<table>
+<tr>
+<td class="name">Name</td>
+
+***DAYS***
+<td class="total">WorkingHours</td>
+<td class="total">WorkingDays</td>
+<td class="total">VacationDays</td>
+<td class="total">SickDays</td>
+<td class="total">OvertimeHours</td>
+</tr>
+
+***SUMS***
+
+</table>
+
+<h1>Missing</h1>
+<p>***MISSINGLIST***</p>
+
+<h1>Overtimes</h1>
+<table>
+<tr><td class="name">Name</td><td class="total">OvertimeHours</td></tr>
+***OVERTIMELIST***
+</table>
+
+<h1>Sick days</h1>
+<table>
+<tr><td class="name">Name</td><td class="total">SickDays</td></tr>
+***SICKLIST***
+</table>
+
+<h1>Vacation days</h1>
+<table>
+<tr><td class="name">Name</td><td class="total">VacationDays</td></tr>
+***VACATIONLIST***
+</table>
+
+</body>
