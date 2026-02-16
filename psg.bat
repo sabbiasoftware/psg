@@ -1,1 +1,1 @@
-py\python.exe sum.py
+py\python.exe sum.py %1
