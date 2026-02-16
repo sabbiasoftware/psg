@@ -120,7 +120,7 @@ if args.filename is not None:
         inputfilename = args.filename
     else:
         print(f"Input file does not exist: {args.filename}")
-        quit(1)
+        sys.exit(1)
 else:
     downloads_folder = userpaths.get_downloads()
     matching_files = glob.glob(
@@ -128,7 +128,7 @@ else:
     )
     if len(matching_files) == 0:
         print(f"Could not find any timesheet in folder: {format(downloads_folder)}")
-        quit(1)
+        sys.exit(1)
     inputfilename = max(matching_files, key=os.path.getctime)
 
 
@@ -142,7 +142,7 @@ min_date = dt.max
 max_date = dt.min
 
 try:
-    with open(inputfilename, newline="") as inputfile:
+    with open(inputfilename, newline="", encoding="utf-8") as inputfile:
         reader = csv.DictReader(inputfile, delimiter="\t")
         for row in reader:
             if row["Date"][0:2] == "20":
@@ -165,7 +165,7 @@ try:
                     max_date = date
 except Exception:
     print(f"Could not parse input: {inputfilename}")
-    quit(1)
+    sys.exit(1)
 
 
 # ***********************
