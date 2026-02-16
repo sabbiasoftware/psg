@@ -61,20 +61,27 @@ special_projects = {
 
 def read_strings(fn, do_strip=False, do_lower=False):
     strings = []
-    with open(fn, "r", encoding="utf-8") as f:
-        strings = f.read().splitlines()
-    if do_strip:
-        strings = [s.strip() for s in strings]
-    if do_lower:
-        strings = [s.lower() for s in strings]
-    return strings
+    try:
+        with open(fn, "r", encoding="utf-8") as f:
+            strings = f.read().splitlines()
+        if do_strip:
+            strings = [s.strip() for s in strings]
+        if do_lower:
+            strings = [s.lower() for s in strings]
+        return strings
+    except Exception:
+        print(f"Could not open '{fn}'")
+        return []
 
 
 def read_dates(fn):
-    dates = []
-    with open(fn, "r") as f:
-        dates = [dt.strptime(s.strip(), "%Y-%m-%d") for s in f]
-    return dates
+    try:
+        dates = []
+        with open(fn, "r") as f:
+            dates = [dt.strptime(s.strip(), "%Y-%m-%d") for s in f]
+        return dates
+    except Exception:
+        return []
 
 
 def format_hours(hours):
@@ -115,29 +122,18 @@ def is_working_day(date) -> bool:
     ) or (date in cfg_workingdays)
 
 
-# ***************
-# Read input file
-# ***************
+def read_input(inputfilename):
+    if inputfilename is None:
+        downloads_folder = userpaths.get_downloads()
+        matching_files = glob.glob(
+            os.path.join(userpaths.get_downloads(), "TimesheetReport_*")
+        )
+        if len(matching_files) == 0:
+            print("Could not find any timesheet in {}".format(downloads_folder))
+            return None
+        inputfilename = max(matching_files, key=os.path.getctime)
+    return read_strings(inputfilename)
 
-parser = argparse.ArgumentParser("psg - Presence Sheet Generator")
-parser.add_argument(
-    "filename",
-    nargs="?",
-    help="Timesheet in CSV format to process. If omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder",
-)
-args = parser.parse_args()
-
-inputfilename = None
-if args.filename is not None:
-    inputfilename = args.filename
-else:
-    downloads_folder = userpaths.get_downloads()
-    raw_files = glob.glob(os.path.join(userpaths.get_downloads(), "TimesheetReport_*"))
-    if len(raw_files) == 0:
-        print("Could not find any timesheet in {}".format(downloads_folder))
-        quit()
-    inputfilename = max(raw_files, key=os.path.getctime)
-raw = read_strings(inputfilename)
 
 # ************
 # Read configs
@@ -150,11 +146,26 @@ cfg_workingdays = read_dates(os.path.join("cfg", "workingdays.txt"))
 cfg_projects = read_strings(os.path.join("cfg", "projects.txt"))
 
 
+# ****************************************************************************
+
+parser = argparse.ArgumentParser("psg - Presence Sheet Generator")
+parser.add_argument(
+    "filename",
+    nargs="?",
+    help="Timesheet in CSV format to process. If omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder",
+)
+args = parser.parse_args()
+rawinput = read_input(args.filename)
+if rawinput is None or len(rawinput) == 0:
+    print("No input to parse, quitting")
+    quit(1)
+
+
 # ************
 # Parse header
 # ************
 
-header = raw[0].split("\t")
+header = rawinput[0].split("\t")
 idate = header.index("Date")
 iemail = header.index("Email Address")
 iuser = header.index("User")
@@ -171,11 +182,11 @@ ihours = header.index("Hours")
 # Parse data
 # **********
 
-entries = []
+parsedinput = []
 actual_projects = set()
 
-for r in raw:
-    # TODO: find better way to figure if current line is header, footer or data
+for r in rawinput:
+    # TODO: find better way to figure if current line is header, subtotal, footer or data
     if r[0:2] == "20":
         rr = r.split("\t")
 
@@ -190,7 +201,7 @@ for r in raw:
         name_included = (len(cfg_users) == 0) or (email in cfg_users)
 
         if name_included and project_included:
-            entries.append(
+            parsedinput.append(
                 Entry(
                     dt.strptime(rr[idate], "%Y%m%d"),
                     email,
@@ -207,19 +218,24 @@ for r in raw:
                     "{} {}".format(rr[iproject], rr[iprojectdescription])
                 )
 
-daysums = {}
+
+# **************
+# Summarize data
+# **************
+
+suminput = {}
 
 min_date = dt.max
 max_date = dt.min
 
-for e in entries:
-    if e.email not in daysums.keys():
-        daysums[e.email] = {}
-        daysums[e.email]["user"] = e.user
-        daysums[e.email]["approver"] = e.approver
-    if e.date not in daysums[e.email].keys():
-        daysums[e.email][e.date] = [dec0, dec0, dec0, dec0, dec0]
-    daysums[e.email][e.date][get_hour_index(e)] += e.hours
+for e in parsedinput:
+    if e.email not in suminput.keys():
+        suminput[e.email] = {}
+        suminput[e.email]["user"] = e.user
+        suminput[e.email]["approver"] = e.approver
+    if e.date not in suminput[e.email].keys():
+        suminput[e.email][e.date] = [dec0, dec0, dec0, dec0, dec0]
+    suminput[e.email][e.date][get_hour_index(e)] += e.hours
 
     if e.date < min_date:
         min_date = e.date
@@ -228,9 +244,9 @@ for e in entries:
         max_date = e.date
 
 
-# *******************
-# Generate the output
-# *******************
+# ***********************
+# Generate the Excel file
+# ***********************
 
 workbook = xlsxwriter.Workbook("sum.xlsx")
 worksheet = workbook._add_sheet("Summary")
@@ -286,12 +302,12 @@ vacationlist = []
 
 
 row = 5
-for email in sorted(daysums.keys()):
+for email in sorted(suminput.keys()):
     total_hours = [dec0, dec0, dec0, dec0, dec0]
-    for date in daysums[email]:
+    for date in suminput[email]:
         if isinstance(date, dt):
             for h in range(0, 5):
-                total_hours[h] += daysums[email][date][h]
+                total_hours[h] += suminput[email][date][h]
 
     # if there are filter projects configured, then filter out people with 0 hours against projects
     if len(cfg_projects) > 0 and total_hours[IWORK] == 0:
@@ -305,8 +321,8 @@ for email in sorted(daysums.keys()):
     col = 9
     while date <= max_date:
         hours = []
-        if date in daysums[email].keys():
-            hours = daysums[email][date]
+        if date in suminput[email].keys():
+            hours = suminput[email][date]
         else:
             hours = [dec0, dec0, dec0, dec0, dec0]
 
@@ -344,8 +360,8 @@ for email in sorted(daysums.keys()):
         col += 1
 
     worksheet.write(row, 0, email, fmttxt)
-    worksheet.write(row, 1, daysums[email]["user"])
-    worksheet.write(row, 2, daysums[email]["approver"])
+    worksheet.write(row, 1, suminput[email]["user"])
+    worksheet.write(row, 2, suminput[email]["approver"])
     worksheet.write_number(row, 3, int(total_hours[IWORK]), fmtnum)
     worksheet.write_number(
         row, 4, int((total_hours[IWORK] - overtime_hours) // dec8), fmtnum
@@ -371,7 +387,7 @@ for email in sorted(daysums.keys()):
 
 
 for email in sorted(cfg_users):
-    if email not in daysums.keys():
+    if email not in suminput.keys():
         worksheet.write(row, 0, email, fmttxt)
 
         date = min_date
