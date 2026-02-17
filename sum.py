@@ -269,7 +269,7 @@ for email in sorted(suminput.keys()):
                 worksheet.write(row, col, format_hours(hours[IWORK]), fmtunder)
                 missing = True
             elif (hours[IWORK] > dec8) and (hours[1:4] == [dec0, dec0, dec0]):
-                worksheet.write(row, col, format_hours(hours[IWORK] - dec8), fmtover)
+                worksheet.write(row, col, format_hours(hours[IWORK]), fmtover)
                 overtime_hours += hours[IWORK] - dec8
             else:
                 worksheet.write(row, col, "?", fmtquest)
