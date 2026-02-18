@@ -101,10 +101,10 @@ def is_working_day(date) -> bool:
 # ************
 
 cfg_users = read_strings(os.path.join("cfg", "users.txt"), do_strip=True, do_lower=True)
+cfg_projects = read_strings(os.path.join("cfg", "projects.txt"), do_lower=True)
 cfg_holidays = read_dates(os.path.join("cfg", "holidays.txt"))
 cfg_weekends = read_dates(os.path.join("cfg", "weekends.txt"))
 cfg_workingdays = read_dates(os.path.join("cfg", "workingdays.txt"))
-cfg_projects = read_strings(os.path.join("cfg", "projects.txt"))
 
 
 # ****************************************************************************
@@ -133,6 +133,7 @@ else:
         print(f"Could not find any timesheet in folder: {format(downloads_folder)}")
         sys.exit(1)
     inputfilename = max(matching_files, key=os.path.getctime)
+print(f"Parsing: {inputfilename}")
 
 
 # **************
@@ -148,24 +149,43 @@ try:
     with open(inputfilename, newline="", encoding="utf-8") as inputfile:
         reader = csv.DictReader(inputfile, delimiter="\t")
         for row in reader:
-            if row["Date"][0:2] == "20":
-                email = row["Email Address"]
+            # Assumption: if first field can be parsed as date, then it is a data row
+            date = None
+            try:
                 date = dt.strptime(row["Date"], "%Y%m%d")
-                if email not in suminput.keys():
-                    suminput[email] = {}
-                    suminput[email]["user"] = row["User"]
-                    suminput[email]["approver"] = row[
-                        "Level 1 Approver Name (configured)"
-                    ]
-                if date not in suminput[email].keys():
-                    suminput[email][date] = [dec0, dec0, dec0, dec0, dec0]
-                suminput[email][date][get_hour_index(row)] += dec(row["Hours"])
+            except ValueError:
+                continue
 
-                if date < min_date:
-                    min_date = date
+            # Filter by email
+            email = row["Email Address"].lower()
+            if len(cfg_users) > 0:
+                if email not in cfg_users and email.replace("@capgemini.com", "") not in cfg_users:
+                    continue
 
-                if date > max_date:
-                    max_date = date
+            # Filter by project
+            if len(cfg_projects) > 0:
+                project = row["Project"].lower()
+                projectdescription = row["Project Description"].lower()
+                projectmatch = False
+                for p in cfg_projects:
+                    if p in project or p in projectdescription:
+                        projectmatch = True
+                        break
+                if not projectmatch:
+                    continue
+
+            if email not in suminput.keys():
+                suminput[email] = {}
+                suminput[email]["user"] = row["User"]
+                suminput[email]["approver"] = row["Level 1 Approver Name (configured)"]
+
+            if date not in suminput[email].keys():
+                suminput[email][date] = [dec0, dec0, dec0, dec0, dec0]
+
+            suminput[email][date][get_hour_index(row)] += dec(row["Hours"])
+
+            min_date = min(min_date, date)
+            max_date = max(max_date, date)
 except Exception as exc:
     print(f"Could not parse input: {inputfilename}")
     print(f"Exception: {type(exc)}, Arguments: {exc.args}")
