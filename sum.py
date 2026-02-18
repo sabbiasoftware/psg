@@ -40,8 +40,9 @@ def read_strings(fn, do_strip=False, do_lower=False):
         if do_lower:
             strings = [s.lower() for s in strings]
         return strings
-    except Exception:
+    except Exception as exc:
         print(f"Could not open '{fn}'")
+        print(f"Exception: {type(exc)}, Arguments: {exc.args}")
         return []
 
 
@@ -51,7 +52,9 @@ def read_dates(fn):
         with open(fn, "r") as f:
             dates = [dt.strptime(s.strip(), "%Y-%m-%d") for s in f]
         return dates
-    except Exception:
+    except Exception as exc:
+        print(f"Could not parse '{fn}'")
+        print(f"Exception: {type(exc)}, Arguments: {exc.args}")
         return []
 
 
@@ -163,8 +166,9 @@ try:
 
                 if date > max_date:
                     max_date = date
-except Exception:
+except Exception as exc:
     print(f"Could not parse input: {inputfilename}")
+    print(f"Exception: {type(exc)}, Arguments: {exc.args}")
     sys.exit(1)
 
 
@@ -345,4 +349,3 @@ if sys.platform == "win32":
     # subprocess.Popen(["start", "excel", "sum.xlsx"])
 elif sys.platform == "linux":
     subprocess.Popen(["libreoffice", "--calc", "sum.xlsx"])
-# webbrowser.open_new_tab("sum_out.html")
