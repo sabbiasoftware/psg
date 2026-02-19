@@ -1,1 +1,2 @@
-py\python.exe sum.py %1
+py\python.exe sum.py -a -s %1
+pause

@@ -29,6 +29,8 @@ special_projects = {
     "Public Holiday": IHOLIDAY,
 }
 
+MONTHLYSTANDBYLIMIT = 168
+
 
 def read_strings(fn, do_strip=False, do_lower=False):
     strings = []
@@ -110,12 +112,14 @@ cfg_workingdays = read_dates(os.path.join("cfg", "workingdays.txt"))
 # ****************************************************************************
 
 parser = argparse.ArgumentParser("psg - Presence Sheet Generator")
-parser.add_argument(
-    "filename",
-    nargs="?",
-    help="Timesheet in CSV format to process. If omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder",
-)
+parser.add_argument("-a", "--autoopen", action="store_true", help="automatically open generated file with Excel/Writer")
+parser.add_argument("-s", "--standbylimit", action="store_true", help="force monthly standby limit")
+parser.add_argument("filename", nargs="?", help="timesheet in CSV format to process; if omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder")
 args = parser.parse_args()
+
+if args.help:
+    parser.print_help()
+    sys.exit(0)
 
 inputfilename = None
 if args.filename is not None:
@@ -159,7 +163,10 @@ try:
             # Filter by email
             email = row["Email Address"].lower()
             if len(cfg_users) > 0:
-                if email not in cfg_users and email.replace("@capgemini.com", "") not in cfg_users:
+                if (
+                    email not in cfg_users
+                    and email.replace("@capgemini.com", "") not in cfg_users
+                ):
                     continue
 
             # Filter by project
@@ -191,6 +198,42 @@ except Exception as exc:
     print(f"Exception: {type(exc)}, Arguments: {exc.args}")
     sys.exit(1)
 
+# *************************
+# Handle 168+ standby hours
+# *************************
+
+if args.standbylimit:
+    for email in suminput:
+        # avoid importing dateutil.relativedelta for now...
+        year = min_date.year
+        month = min_date.month
+        while year < max_date.year or (year == max_date.year and month <= max_date.month):
+            monthlystandy = sum([ suminput[email][d][ISTANDBY] for d in suminput[email] if isinstance(d, dt) and d.year == year and d.month == month ])
+
+            if monthlystandy > MONTHLYSTANDBYLIMIT:
+                print(f"Standby hours of {format_hours(monthlystandy)} in {year}/{month} exceeds {MONTHLYSTANDBYLIMIT} hours for {email}")
+                for date in suminput[email]:
+                    if isinstance(date, dt) and date.year == year and date.month == month:
+                        otmulti = 1 if is_working_day(date) else 2
+                        if suminput[email][date][ISTANDBY] >= 5 * otmulti:
+                            w1 = suminput[email][date][IWORK]
+                            s1 = suminput[email][date][ISTANDBY]
+                            pluswork = suminput[email][date][ISTANDBY] // (5 * otmulti)
+                            minusstandby = pluswork * 5 * otmulti
+                            suminput[email][date][ISTANDBY] -= minusstandby
+                            suminput[email][date][IWORK] += pluswork
+                            w2 = suminput[email][date][IWORK]
+                            s2 = suminput[email][date][ISTANDBY]
+                            print(f"  {format_date(date)}, {email}: ({format_hours(w1)}, {format_hours(s1)}) + (+{format_hours(pluswork)}, -{format_hours(minusstandby)}) = ({format_hours(w2)}, {format_hours(s2)})")
+                            monthlystandy -= minusstandby
+                            if monthlystandy <= MONTHLYSTANDBYLIMIT:
+                                print(f"  Standby hours in {year}/{month} is {format_hours(monthlystandy)} hours for {email}")
+                                break
+
+            month += 1
+            if month == 13:
+                year += 1
+                month = 1
 
 # ***********************
 # Generate the Excel file
@@ -364,8 +407,9 @@ worksheet.autofilter(5, 0, row - 1, col - 1)
 
 workbook.close()
 
-if sys.platform == "win32":
-    os.system("start excel sum.xlsx")
-    # subprocess.Popen(["start", "excel", "sum.xlsx"])
-elif sys.platform == "linux":
-    subprocess.Popen(["libreoffice", "--calc", "sum.xlsx"])
+if args.autoopen:
+    if sys.platform == "win32":
+        os.system("start excel sum.xlsx")
+        # subprocess.Popen(["start", "excel", "sum.xlsx"])
+    elif sys.platform == "linux":
+        subprocess.Popen(["libreoffice", "--calc", "sum.xlsx"])
