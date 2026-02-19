@@ -117,10 +117,6 @@ parser.add_argument("-s", "--standbylimit", action="store_true", help="force mon
 parser.add_argument("filename", nargs="?", help="timesheet in CSV format to process; if omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder")
 args = parser.parse_args()
 
-if args.help:
-    parser.print_help()
-    sys.exit(0)
-
 inputfilename = None
 if args.filename is not None:
     if os.path.isfile(args.filename):
@@ -406,6 +402,7 @@ for email in sorted(cfg_users):
 worksheet.autofilter(5, 0, row - 1, col - 1)
 
 workbook.close()
+print(f"Saved: {os.path.join(os.getcwd(), str(workbook.filename))}")
 
 if args.autoopen:
     if sys.platform == "win32":
