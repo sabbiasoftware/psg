@@ -98,6 +98,28 @@ def is_working_day(date) -> bool:
     ) or (date in cfg_workingdays)
 
 
+# returns true if email to be processed
+def filter_email(email):
+    return len(cfg_users) == 0 or email in cfg_users or email.replace("@capgemini.com", "") in cfg_users
+
+
+# returns true if project to be processed
+def filter_project(project, projectdescription):
+    if len(cfg_projects) == 0:
+        return True
+
+    proj = project.lower()
+    projdesc = projectdescription.lower()
+
+    projectmatch = False
+    for p in cfg_projects:
+        if p in proj or p in projdesc:
+            projectmatch = True
+            break
+
+    return projectmatch
+
+
 # ************
 # Read configs
 # ************
@@ -151,10 +173,15 @@ print(f"Parsing: {inputfilename}")
 # Summarize data
 # **************
 
-suminput = {}
+users = {}
+approvers = {}
+sumbyuser = {}
+sumbyuserandproj = {}
 
 min_date = dt.max
 max_date = dt.min
+
+
 
 try:
     with open(inputfilename, newline="", encoding="utf-8") as inputfile:
@@ -167,36 +194,34 @@ try:
             except ValueError:
                 continue
 
-            # Filter by email
             email = row["Email Address"].lower()
-            if len(cfg_users) > 0:
-                if (
-                    email not in cfg_users
-                    and email.replace("@capgemini.com", "") not in cfg_users
-                ):
-                    continue
 
-            # Filter by project
-            if len(cfg_projects) > 0:
-                project = row["Project"].lower()
-                projectdescription = row["Project Description"].lower()
-                projectmatch = False
-                for p in cfg_projects:
-                    if p in project or p in projectdescription:
-                        projectmatch = True
-                        break
-                if not projectmatch:
-                    continue
+            if not filter_email(email):
+                continue
 
-            if email not in suminput.keys():
-                suminput[email] = {}
-                suminput[email]["user"] = row["User"]
-                suminput[email]["approver"] = row["Level 1 Approver Name (configured)"]
+            if not filter_project(row["Project"], row["Project Description"]):
+                continue
 
-            if date not in suminput[email].keys():
-                suminput[email][date] = [dec0, dec0, dec0, dec0, dec0]
+            if email not in users.keys():
+                users[email] = row["User"]
 
-            suminput[email][date][get_hour_index(row)] += dec(row["Hours"])
+            if email not in approvers.keys():
+                approvers[email] = row["Level 1 Approver Name (configured)"]
+
+            # sumbyuser update
+            if email not in sumbyuser.keys():
+                sumbyuser[email] = {}
+            if date not in sumbyuser[email].keys():
+                sumbyuser[email][date] = [dec0, dec0, dec0, dec0, dec0]
+            sumbyuser[email][date][get_hour_index(row)] += dec(row["Hours"])
+
+            # sumbyuserandproj update
+            projectname = f"{row['Project']} {row['Project Description']}"
+            if (email, projectname) not in sumbyuserandproj.keys():
+                sumbyuserandproj[email, projectname] = {}
+            if date not in sumbyuserandproj[email, projectname].keys():
+                sumbyuserandproj[email, projectname][date] = [ dec0, dec0, dec0, dec0, dec0 ]
+            sumbyuserandproj[email, projectname][date][get_hour_index(row)] += dec(row["Hours"])
 
             min_date = min(min_date, date)
             max_date = max(max_date, date)
@@ -210,7 +235,7 @@ except Exception as exc:
 # *************************
 
 if args.standbylimit:
-    for email in suminput:
+    for email in sumbyuser:
         # avoid importing dateutil.relativedelta for now...
         year = min_date.year
         month = min_date.month
@@ -219,39 +244,38 @@ if args.standbylimit:
         ):
             monthlystandy = sum(
                 [
-                    suminput[email][d][ISTANDBY]
-                    for d in suminput[email]
-                    if isinstance(d, dt) and d.year == year and d.month == month
+                    sumbyuser[email][d][ISTANDBY]
+                    for d in sumbyuser[email]
+                    if d.year == year and d.month == month
                 ]
             )
 
             if monthlystandy > MONTHLYSTANDBYLIMIT:
                 print(
-                    f"Standby hours of {format_hours(monthlystandy)} in {year}/{month} exceeds {MONTHLYSTANDBYLIMIT} hours for {email}"
+                    f"Standby hours of {format_hours(monthlystandy)} in {year}-{month:02d} exceeds {MONTHLYSTANDBYLIMIT} hours for {email}"
                 )
-                for date in suminput[email]:
+                for date in sumbyuser[email]:
                     if (
-                        isinstance(date, dt)
-                        and date.year == year
+                        date.year == year
                         and date.month == month
                     ):
                         otmulti = 1 if is_working_day(date) else 2
-                        if suminput[email][date][ISTANDBY] >= 5 * otmulti:
-                            w1 = suminput[email][date][IWORK]
-                            s1 = suminput[email][date][ISTANDBY]
-                            pluswork = suminput[email][date][ISTANDBY] // (5 * otmulti)
+                        if sumbyuser[email][date][ISTANDBY] >= 5 * otmulti:
+                            w1 = sumbyuser[email][date][IWORK]
+                            s1 = sumbyuser[email][date][ISTANDBY]
+                            pluswork = sumbyuser[email][date][ISTANDBY] // (5 * otmulti)
                             minusstandby = pluswork * 5 * otmulti
-                            suminput[email][date][ISTANDBY] -= minusstandby
-                            suminput[email][date][IWORK] += pluswork
-                            w2 = suminput[email][date][IWORK]
-                            s2 = suminput[email][date][ISTANDBY]
+                            sumbyuser[email][date][ISTANDBY] -= minusstandby
+                            sumbyuser[email][date][IWORK] += pluswork
+                            w2 = sumbyuser[email][date][IWORK]
+                            s2 = sumbyuser[email][date][ISTANDBY]
                             print(
                                 f"  {format_date(date)}, {email}: ({format_hours(w1)}, {format_hours(s1)}) + (+{format_hours(pluswork)}, -{format_hours(minusstandby)}) = ({format_hours(w2)}, {format_hours(s2)})"
                             )
                             monthlystandy -= minusstandby
                             if monthlystandy <= MONTHLYSTANDBYLIMIT:
                                 print(
-                                    f"  Standby hours in {year}/{month} is {format_hours(monthlystandy)} hours for {email}"
+                                    f"  Standby hours in {year}-{month:02d} is {format_hours(monthlystandy)} hours for {email}"
                                 )
                                 break
 
@@ -323,12 +347,11 @@ vacationlist = []
 
 
 row = 6
-for email in sorted(suminput.keys()):
+for email in sorted(sumbyuser.keys()):
     total_hours = [dec0, dec0, dec0, dec0, dec0]
-    for date in suminput[email]:
-        if isinstance(date, dt):
-            for h in range(0, 5):
-                total_hours[h] += suminput[email][date][h]
+    for date in sumbyuser[email]:
+        for h in range(0, 5):
+            total_hours[h] += sumbyuser[email][date][h]
 
     # if there are filter projects configured, then filter out people with 0 hours against projects
     if len(cfg_projects) > 0 and total_hours[IWORK] == 0:
@@ -342,8 +365,8 @@ for email in sorted(suminput.keys()):
     col = 9
     while date <= max_date:
         hours = []
-        if date in suminput[email].keys():
-            hours = suminput[email][date]
+        if date in sumbyuser[email].keys():
+            hours = sumbyuser[email][date]
         else:
             hours = [dec0, dec0, dec0, dec0, dec0]
 
@@ -381,8 +404,8 @@ for email in sorted(suminput.keys()):
         col += 1
 
     worksheet.write(row, 0, email, fmttxt)
-    worksheet.write(row, 1, suminput[email]["user"])
-    worksheet.write(row, 2, suminput[email]["approver"])
+    worksheet.write(row, 1, users[email])
+    worksheet.write(row, 2, approvers[email])
     worksheet.write_number(row, 3, int(total_hours[IWORK]), fmtnum)
     worksheet.write_number(
         row, 4, int((total_hours[IWORK] - overtime_hours) // dec8), fmtnum
@@ -408,7 +431,7 @@ for email in sorted(suminput.keys()):
 
 
 for email in sorted(cfg_users):
-    if email not in suminput.keys() and f"{email}@capgemini.com" not in suminput.keys():
+    if email not in sumbyuser.keys() and f"{email}@capgemini.com" not in sumbyuser.keys():
         worksheet.write(row, 0, email, fmttxt)
 
         date = min_date
