@@ -120,9 +120,9 @@ def filter_project(project, projectdescription):
     return projectmatch
 
 
-# ************
+##############
 # Read configs
-# ************
+##############
 
 cfg_users = read_strings(os.path.join("cfg", "users.txt"), do_strip=True, do_lower=True)
 cfg_projects = read_strings(os.path.join("cfg", "projects.txt"), do_lower=True)
@@ -131,7 +131,7 @@ cfg_weekends = read_dates(os.path.join("cfg", "weekends.txt"))
 cfg_workingdays = read_dates(os.path.join("cfg", "workingdays.txt"))
 
 
-# ****************************************************************************
+##############################################################################
 
 parser = argparse.ArgumentParser("psg - Presence Sheet Generator")
 parser.add_argument(
@@ -169,9 +169,9 @@ else:
 print(f"Parsing: {inputfilename}")
 
 
-# **************
+################
 # Summarize data
-# **************
+################
 
 users = {}
 approvers = {}
@@ -180,7 +180,6 @@ sumbyuserandproj = {}
 
 min_date = dt.max
 max_date = dt.min
-
 
 
 try:
@@ -230,9 +229,9 @@ except Exception as exc:
     print(f"Exception: {type(exc)}, Arguments: {exc.args}")
     sys.exit(1)
 
-# *************************
+###########################
 # Handle 168+ standby hours
-# *************************
+###########################
 
 if args.standbylimit:
     for email in sumbyuser:
@@ -284,12 +283,45 @@ if args.standbylimit:
                 year += 1
                 month = 1
 
-# ***********************
-# Generate the Excel file
-# ***********************
+
+###################
+# Generate workbook
+###################
+
+def generate_header(worksheet, fmtheaderday, fmtheadertxt, fmtheadernum, duration, projects, generated):
+    worksheet.write(0, 0, f"Duration: {duration}")
+    worksheet.write(1, 0, f"Projects: {projects}")
+    worksheet.write(2, 0, f"Generated: {generated}")
+
+    worksheet.write(5, 0, "Name", fmtheadertxt)
+    worksheet.write(5, 1, "User", fmtheadertxt)
+    worksheet.write(5, 2, "Approver", fmtheadertxt)
+    worksheet.write(5, 3, "Project", fmtheadertxt)
+    worksheet.write(5, 4, "WorkH", fmtheadernum)
+    worksheet.write(5, 5, "WorkD", fmtheadernum)
+    worksheet.write(5, 6, "VacaD", fmtheadernum)
+    worksheet.write(5, 7, "SickD", fmtheadernum)
+    worksheet.write(5, 8, "OverH", fmtheadernum)
+    worksheet.write(5, 9, "StbyH", fmtheadernum)
+
+    date = min_date
+    lastmonth = 0
+    col = 10
+    while date <= max_date:
+        if lastmonth != date.month:
+            lastmonth = date.month
+            worksheet.write(4, col, calendar.month_name[date.month], fmtheadertxt)
+        worksheet.write_number(5, col, date.day, fmtheaderday)
+        date = date + td(days=1)
+        col += 1
+
+    worksheet.set_column(0, 0, width=40)
+    worksheet.set_column(1, 3, width=24)
+    worksheet.set_column(4, 9, width=8)
+    worksheet.set_column(10, col - 1, width=6)
+
 
 workbook = xlsxwriter.Workbook("sum.xlsx")
-worksheet = workbook._add_sheet("Summary")
 
 fmtheaderday = workbook.add_format({"align": "center", "bold": "true"})
 fmtheadertxt = workbook.add_format({"align": "left", "bold": "true"})
@@ -305,48 +337,22 @@ fmtover = workbook.add_format({"align": "center", "bg_color": "#ffa500"})
 fmtquest = workbook.add_format({"align": "center", "bg_color": "#808080"})
 fmtempty = workbook.add_format({"align": "center", "bg_color": "#ffffff"})
 
+wsbyuser = workbook.add_worksheet("By user")
+wsbyuserandproj = workbook.add_worksheet("By user and project")
 
-actual_projects = "All"
-if len(cfg_projects) > 0:
-    actual_projects = ", ".join(actual_projects)
+duration = f"{format_date(min_date)}-{format_date(max_date)}"
+actual_projects = "All" if len(cfg_projects) == 0 else ", ".join(cfg_projects)
+generated = f"{format_datetime(dt.now())}"
 
-worksheet.write(0, 0, f"Duration: {format_date(min_date)}-{format_date(max_date)}")
-worksheet.write(1, 0, f"Projects: {actual_projects}")
-worksheet.write(2, 0, f"Generated: {format_datetime(dt.now())}")
+generate_header(wsbyuser, fmtheaderday, fmtheadertxt, fmtheadernum, duration, actual_projects, generated)
+generate_header(wsbyuserandproj, fmtheaderday, fmtheadertxt, fmtheadernum, duration, actual_projects, generated)
 
-worksheet.write(5, 0, "Name", fmtheadertxt)
-worksheet.write(5, 1, "User", fmtheadertxt)
-worksheet.write(5, 2, "Approver", fmtheadertxt)
-worksheet.write(5, 3, "WorkH", fmtheadernum)
-worksheet.write(5, 4, "WorkD", fmtheadernum)
-worksheet.write(5, 5, "VacaD", fmtheadernum)
-worksheet.write(5, 6, "SickD", fmtheadernum)
-worksheet.write(5, 7, "OverH", fmtheadernum)
-worksheet.write(5, 8, "StbyH", fmtheadernum)
-
-date = min_date
-lastmonth = 0
-col = 9
-while date <= max_date:
-    if lastmonth != date.month:
-        lastmonth = date.month
-        worksheet.write(4, col, calendar.month_name[date.month], fmtheadertxt)
-    worksheet.write_number(5, col, date.day, fmtheaderday)
-    date = date + td(days=1)
-    col += 1
-
-worksheet.set_column(0, 0, width=40)
-worksheet.set_column(1, 2, width=24)
-worksheet.set_column(3, 8, width=8)
-worksheet.set_column(9, col - 1, width=6)
-
-missinglist = []
-overtimelist = []
-sicklist = []
-vacationlist = []
-
+#######################
+# generate data by user
+#######################
 
 row = 6
+col = 10
 for email in sorted(sumbyuser.keys()):
     total_hours = [dec0, dec0, dec0, dec0, dec0]
     for date in sumbyuser[email]:
@@ -362,7 +368,7 @@ for email in sorted(sumbyuser.keys()):
     standby_hours = 0
 
     date = min_date
-    col = 9
+    col = 10
     while date <= max_date:
         hours = []
         if date in sumbyuser[email].keys():
@@ -372,86 +378,174 @@ for email in sorted(sumbyuser.keys()):
 
         if is_working_day(date):
             if hours[0:4] == [dec8, dec0, dec0, dec0]:
-                worksheet.write_number(row, col, 8, fmtwork)
+                wsbyuser.write_number(row, col, 8, fmtwork)
             elif hours[0:4] == [dec0, dec8, dec0, dec0]:
-                worksheet.write(row, col, "V", fmtvaca)
+                wsbyuser.write(row, col, "V", fmtvaca)
             elif hours[0:4] == [dec0, dec0, dec8, dec0]:
-                worksheet.write(row, col, "S", fmtsick)
+                wsbyuser.write(row, col, "S", fmtsick)
             elif hours[0:4] == [dec0, dec0, dec0, dec0]:
-                worksheet.write(row, col, "-", fmtno)
+                wsbyuser.write(row, col, "-", fmtno)
                 missing = True
             elif (hours[IWORK] < dec8) and (hours[1:4] == [dec0, dec0, dec0]):
-                worksheet.write(row, col, format_hours(hours[IWORK]), fmtunder)
+                wsbyuser.write(row, col, format_hours(hours[IWORK]), fmtunder)
                 missing = True
             elif (hours[IWORK] > dec8) and (hours[1:4] == [dec0, dec0, dec0]):
-                worksheet.write(row, col, format_hours(hours[IWORK]), fmtover)
+                wsbyuser.write(row, col, format_hours(hours[IWORK]), fmtover)
                 overtime_hours += hours[IWORK] - dec8
             else:
-                worksheet.write(row, col, "?", fmtquest)
+                wsbyuser.write(row, col, "?", fmtquest)
                 missing = True
         else:
             if hours[IWORK] > dec0:
-                worksheet.write(row, col, format_hours(hours[IWORK]), fmtover)
+                wsbyuser.write(row, col, format_hours(hours[IWORK]), fmtover)
                 overtime_hours += hours[IWORK]
             elif hours[0:4] == [dec0, dec0, dec0, dec0]:
-                worksheet.write(row, col, "", fmtempty)
+                wsbyuser.write(row, col, "", fmtempty)
             elif hours[0:4] == [dec0, dec0, dec0, dec8]:
-                worksheet.write(row, col, "", fmtempty)
+                wsbyuser.write(row, col, "", fmtempty)
             else:
-                worksheet.write(row, col, "?", fmtquest)
+                wsbyuser.write(row, col, "?", fmtquest)
 
         date = date + td(days=1)
         col += 1
 
-    worksheet.write(row, 0, email, fmttxt)
-    worksheet.write(row, 1, users[email])
-    worksheet.write(row, 2, approvers[email])
-    worksheet.write_number(row, 3, int(total_hours[IWORK]), fmtnum)
-    worksheet.write_number(
-        row, 4, int((total_hours[IWORK] - overtime_hours) // dec8), fmtnum
-    )
-    worksheet.write_number(row, 5, int(total_hours[IVACATION] // dec8), fmtnum)
-    worksheet.write_number(row, 6, int(total_hours[ISICK] // dec8), fmtnum)
-    worksheet.write_number(row, 7, int(overtime_hours), fmtnum)
-    worksheet.write_number(row, 8, int(total_hours[ISTANDBY]), fmtnum)
-
-    if missing:
-        missinglist.append(email)
-
-    if overtime_hours > dec0:
-        overtimelist.append((email, overtime_hours))
-
-    if total_hours[ISICK] > dec0:
-        sicklist.append((email, total_hours[ISICK] // dec8))
-
-    if total_hours[IVACATION] > dec0:
-        vacationlist.append((email, total_hours[IVACATION] // dec8))
+    wsbyuser.write(row, 0, email, fmttxt)
+    wsbyuser.write(row, 1, users[email])
+    wsbyuser.write(row, 2, approvers[email])
+    wsbyuser.write(row, 3, "any")
+    wsbyuser.write_number(row, 4, int(total_hours[IWORK]), fmtnum)
+    wsbyuser.write_number(row, 5, int((total_hours[IWORK] - overtime_hours) // dec8), fmtnum)
+    wsbyuser.write_number(row, 6, int(total_hours[IVACATION] // dec8), fmtnum)
+    wsbyuser.write_number(row, 7, int(total_hours[ISICK] // dec8), fmtnum)
+    wsbyuser.write_number(row, 8, int(overtime_hours), fmtnum)
+    wsbyuser.write_number(row, 9, int(total_hours[ISTANDBY]), fmtnum)
 
     row += 1
 
 
 for email in sorted(cfg_users):
     if email not in sumbyuser.keys() and f"{email}@capgemini.com" not in sumbyuser.keys():
-        worksheet.write(row, 0, email, fmttxt)
+        wsbyuser.write(row, 0, email, fmttxt)
 
         date = min_date
-        col = 9
+        col = 10
         while date <= max_date:
             if is_working_day(date):
-                worksheet.write(row, col, "-", fmtno)
+                wsbyuser.write(row, col, "-", fmtno)
             else:
-                worksheet.write(row, col, "", fmtempty)
+                wsbyuser.write(row, col, "", fmtempty)
 
             date = date + td(days=1)
             col += 1
 
         for c in range(1, 7):
-            worksheet.write(row, c, 0, fmtnum)
+            wsbyuser.write(row, c, 0, fmtnum)
 
-        missinglist.append(email)
         row += 1
 
-worksheet.autofilter(5, 0, row - 1, col - 1)
+wsbyuser.autofilter(5, 0, row - 1, col - 1)
+
+
+###################################
+# generate data by user and project
+###################################
+
+row = 6
+col = 10
+for email, project in sorted(sumbyuserandproj.keys()):
+    total_hours = [dec0, dec0, dec0, dec0, dec0]
+    for date in sumbyuserandproj[email, project]:
+        for h in range(0, 5):
+            total_hours[h] += sumbyuserandproj[email, project][date][h]
+
+    # if there are filter projects configured, then filter out people with 0 hours against projects
+    if len(cfg_projects) > 0 and total_hours[IWORK] == 0:
+        continue
+
+    missing = False
+    overtime_hours = 0
+    standby_hours = 0
+
+    date = min_date
+    col = 10
+    while date <= max_date:
+        hours = []
+        if date in sumbyuserandproj[email, project].keys():
+            hours = sumbyuserandproj[email, project][date]
+        else:
+            hours = [dec0, dec0, dec0, dec0, dec0]
+
+        if is_working_day(date):
+            if hours[0:4] == [dec8, dec0, dec0, dec0]:
+                wsbyuserandproj.write_number(row, col, 8, fmtwork)
+            elif hours[0:4] == [dec0, dec8, dec0, dec0]:
+                wsbyuserandproj.write(row, col, "V", fmtvaca)
+            elif hours[0:4] == [dec0, dec0, dec8, dec0]:
+                wsbyuserandproj.write(row, col, "S", fmtsick)
+            elif hours[0:4] == [dec0, dec0, dec0, dec0]:
+                wsbyuserandproj.write(row, col, "-", fmtno)
+                missing = True
+            elif (hours[IWORK] < dec8) and (hours[1:4] == [dec0, dec0, dec0]):
+                wsbyuserandproj.write(row, col, format_hours(hours[IWORK]), fmtunder)
+                missing = True
+            elif (hours[IWORK] > dec8) and (hours[1:4] == [dec0, dec0, dec0]):
+                wsbyuserandproj.write(row, col, format_hours(hours[IWORK]), fmtover)
+                overtime_hours += hours[IWORK] - dec8
+            else:
+                wsbyuserandproj.write(row, col, "?", fmtquest)
+                missing = True
+        else:
+            if hours[IWORK] > dec0:
+                wsbyuserandproj.write(row, col, format_hours(hours[IWORK]), fmtover)
+                overtime_hours += hours[IWORK]
+            elif hours[0:4] == [dec0, dec0, dec0, dec0]:
+                wsbyuserandproj.write(row, col, "", fmtempty)
+            elif hours[0:4] == [dec0, dec0, dec0, dec8]:
+                wsbyuserandproj.write(row, col, "", fmtempty)
+            else:
+                wsbyuserandproj.write(row, col, "?", fmtquest)
+
+        date = date + td(days=1)
+        col += 1
+
+    wsbyuserandproj.write(row, 0, email, fmttxt)
+    wsbyuserandproj.write(row, 1, users[email])
+    wsbyuserandproj.write(row, 2, approvers[email])
+    wsbyuserandproj.write(row, 3, project)
+    wsbyuserandproj.write_number(row, 4, int(total_hours[IWORK]), fmtnum)
+    wsbyuserandproj.write_number(row, 5, int((total_hours[IWORK] - overtime_hours) // dec8), fmtnum)
+    wsbyuserandproj.write_number(row, 6, int(total_hours[IVACATION] // dec8), fmtnum)
+    wsbyuserandproj.write_number(row, 7, int(total_hours[ISICK] // dec8), fmtnum)
+    wsbyuserandproj.write_number(row, 8, int(overtime_hours), fmtnum)
+    wsbyuserandproj.write_number(row, 9, int(total_hours[ISTANDBY]), fmtnum)
+
+    row += 1
+
+
+for email in sorted(cfg_users):
+    if email not in sumbyuser.keys() and f"{email}@capgemini.com" not in sumbyuser.keys():
+        wsbyuserandproj.write(row, 0, email, fmttxt)
+
+        date = min_date
+        col = 10
+        while date <= max_date:
+            if is_working_day(date):
+                wsbyuserandproj.write(row, col, "-", fmtno)
+            else:
+                wsbyuserandproj.write(row, col, "", fmtempty)
+
+            date = date + td(days=1)
+            col += 1
+
+        for c in range(1, 7):
+            wsbyuserandproj.write(row, c, 0, fmtnum)
+
+        row += 1
+
+wsbyuserandproj.autofilter(5, 0, row - 1, col - 1)
+
+
+
 
 workbook.close()
 print(f"Saved: {os.path.join(os.getcwd(), str(workbook.filename))}")
