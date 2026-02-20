@@ -112,9 +112,20 @@ cfg_workingdays = read_dates(os.path.join("cfg", "workingdays.txt"))
 # ****************************************************************************
 
 parser = argparse.ArgumentParser("psg - Presence Sheet Generator")
-parser.add_argument("-a", "--autoopen", action="store_true", help="automatically open generated file with Excel/Writer")
-parser.add_argument("-s", "--standbylimit", action="store_true", help="force monthly standby limit")
-parser.add_argument("filename", nargs="?", help="timesheet in CSV format to process; if omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder")
+parser.add_argument(
+    "-a",
+    "--autoopen",
+    action="store_true",
+    help="automatically open generated file with Excel/Writer",
+)
+parser.add_argument(
+    "-s", "--standbylimit", action="store_true", help="force monthly standby limit"
+)
+parser.add_argument(
+    "filename",
+    nargs="?",
+    help="timesheet in CSV format to process; if omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder",
+)
 args = parser.parse_args()
 
 inputfilename = None
@@ -203,13 +214,27 @@ if args.standbylimit:
         # avoid importing dateutil.relativedelta for now...
         year = min_date.year
         month = min_date.month
-        while year < max_date.year or (year == max_date.year and month <= max_date.month):
-            monthlystandy = sum([ suminput[email][d][ISTANDBY] for d in suminput[email] if isinstance(d, dt) and d.year == year and d.month == month ])
+        while year < max_date.year or (
+            year == max_date.year and month <= max_date.month
+        ):
+            monthlystandy = sum(
+                [
+                    suminput[email][d][ISTANDBY]
+                    for d in suminput[email]
+                    if isinstance(d, dt) and d.year == year and d.month == month
+                ]
+            )
 
             if monthlystandy > MONTHLYSTANDBYLIMIT:
-                print(f"Standby hours of {format_hours(monthlystandy)} in {year}/{month} exceeds {MONTHLYSTANDBYLIMIT} hours for {email}")
+                print(
+                    f"Standby hours of {format_hours(monthlystandy)} in {year}/{month} exceeds {MONTHLYSTANDBYLIMIT} hours for {email}"
+                )
                 for date in suminput[email]:
-                    if isinstance(date, dt) and date.year == year and date.month == month:
+                    if (
+                        isinstance(date, dt)
+                        and date.year == year
+                        and date.month == month
+                    ):
                         otmulti = 1 if is_working_day(date) else 2
                         if suminput[email][date][ISTANDBY] >= 5 * otmulti:
                             w1 = suminput[email][date][IWORK]
@@ -220,10 +245,14 @@ if args.standbylimit:
                             suminput[email][date][IWORK] += pluswork
                             w2 = suminput[email][date][IWORK]
                             s2 = suminput[email][date][ISTANDBY]
-                            print(f"  {format_date(date)}, {email}: ({format_hours(w1)}, {format_hours(s1)}) + (+{format_hours(pluswork)}, -{format_hours(minusstandby)}) = ({format_hours(w2)}, {format_hours(s2)})")
+                            print(
+                                f"  {format_date(date)}, {email}: ({format_hours(w1)}, {format_hours(s1)}) + (+{format_hours(pluswork)}, -{format_hours(minusstandby)}) = ({format_hours(w2)}, {format_hours(s2)})"
+                            )
                             monthlystandy -= minusstandby
                             if monthlystandy <= MONTHLYSTANDBYLIMIT:
-                                print(f"  Standby hours in {year}/{month} is {format_hours(monthlystandy)} hours for {email}")
+                                print(
+                                    f"  Standby hours in {year}/{month} is {format_hours(monthlystandy)} hours for {email}"
+                                )
                                 break
 
             month += 1
@@ -379,7 +408,7 @@ for email in sorted(suminput.keys()):
 
 
 for email in sorted(cfg_users):
-    if email not in suminput.keys():
+    if email not in suminput.keys() and f"{email}@capgemini.com" not in suminput.keys():
         worksheet.write(row, 0, email, fmttxt)
 
         date = min_date
