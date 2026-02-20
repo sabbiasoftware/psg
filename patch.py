@@ -1,15 +1,15 @@
 import os
 
 BASEURI = "https://raw.githubusercontent.com/sabbiasoftware/psg/refs/heads/main/"
-
+PATCHFILESNAME = "patchfiles.txt"
 
 def patch_file(fn):
-    print(f"Checking {fn}")
+    print(f"Checking {fn}: ", end="")
     fn_new = f"{fn}.new"
-    cmd = f"curl -s -o {fn_new} {BASEURI}{fn}"
-    print(cmd)
+    cmd = f"curl -f -s -o {fn_new} {BASEURI}{fn}"
+    # print(cmd)
     if os.system(cmd) != 0:
-        print(f"Check failed, skipping {fn}")
+        print("failed, skipping")
         return
 
     content = ""
@@ -22,12 +22,15 @@ def patch_file(fn):
 
     if content == content_new:
         os.remove(fn_new)
-        print(f"No patch found for {fn}")
+        print("no patch available")
     else:
         os.remove(fn)
         os.rename(fn_new, fn)
-        print(f"Successfully patched {fn}")
+        print("successfully patched")
 
 
-patch_file("psg.bat")
-patch_file("psg.py")
+patch_file(PATCHFILESNAME)
+
+with open(PATCHFILESNAME, "r") as f:
+    for pfn in f:
+        patch_file(pfn.strip())
