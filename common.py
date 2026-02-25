@@ -74,3 +74,4 @@ class HourFormat(Enum):
     MISS = auto()
     QUESTION = auto()
     EMPTY = auto()
+    STANDBY = auto()
