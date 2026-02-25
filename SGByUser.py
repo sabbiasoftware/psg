@@ -2,7 +2,7 @@ from datetime import datetime as dt, timedelta as td
 import calendar
 from decimal import Decimal as dec
 from SheetGenerator import SheetGenerator
-from common import HourType, HourFormat, format_hours, format_date
+from common import HourType, HourFormat, dec_to_number, format_hours, format_date
 
 class SGByUser(SheetGenerator):
     MONTHLYSTANDBYLIMIT = 168
@@ -129,6 +129,8 @@ class SGByUser(SheetGenerator):
                 value, format = self.get_day_cell(date, hours)
                 if isinstance(value, int) or isinstance(value, float):
                     worksheet.write_number(row, col, value, self.cellFormats["hourFormats"][format])
+                elif isinstance(value, dec):
+                    worksheet.write_number(row, col, dec_to_number(value), self.cellFormats["hourFormats"][format])
                 else:
                     worksheet.write(row, col, value, self.cellFormats["hourFormats"][format])
 

@@ -2,7 +2,7 @@ from datetime import datetime as dt, timedelta as td
 import calendar
 from decimal import Decimal as dec
 from SheetGenerator import SheetGenerator
-from common import HourType
+from common import HourType, dec_to_number
 
 class SGByUserAndProject(SheetGenerator):
     def __init__(self, config, cellFormats) -> None:
@@ -89,6 +89,8 @@ class SGByUserAndProject(SheetGenerator):
 
                     if isinstance(value, int) or isinstance(value, float):
                         worksheet.write_number(row, col, value, self.cellFormats["hourFormats"][format])
+                    elif isinstance(value, dec):
+                        worksheet.write_number(row, col, dec_to_number(value), self.cellFormats["hourFormats"][format])
                     else:
                         worksheet.write(row, col, value, self.cellFormats["hourFormats"][format])
 
