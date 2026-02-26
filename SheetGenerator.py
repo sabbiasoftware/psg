@@ -1,8 +1,9 @@
 from datetime import datetime as dt
 from common import HourType, HourFormat, format_date, format_datetime
+from config import Config
 
 class SheetGenerator:
-    def __init__(self, config, cellFormats):
+    def __init__(self, config: Config, cellFormats):
         self.config = config
         self.cellFormats = cellFormats
 
@@ -12,8 +13,8 @@ class SheetGenerator:
         self.max_date = dt.min
 
     def get_hour_type(self, project, activity) -> HourType:
-        if project in self.config["special_projects"].keys():
-            return self.config["special_projects"][project]
+        if project in self.config.SpecialProjects.keys():
+            return self.config.SpecialProjects[project]
         elif activity == "Standby Hours - Hungary":
             return HourType.STANDBY
         else:
@@ -22,9 +23,9 @@ class SheetGenerator:
     def is_working_day(self, date) -> bool:
         return (
             (date.weekday() < 5)
-            and (date not in self.config["weekends"])
-            and (date not in self.config["holidays"])
-        ) or (date in self.config["workingdays"])
+            and (date not in self.config.Weekends)
+            and (date not in self.config.Holidays)
+        ) or (date in self.config.Workingdays)
 
     def get_only_hours(self, hour_type, hours):
         if hour_type not in hours:
@@ -83,7 +84,7 @@ class SheetGenerator:
 
     def generateTitle(self, worksheet):
         duration = f"{format_date(self.min_date)}-{format_date(self.max_date)}"
-        actual_projects = "All" if len(self.config["projects"]) == 0 else ", ".join(self.config["projects"])
+        actual_projects = "All" if len(self.config.Projects) == 0 else ", ".join(self.config.Projects)
         generated = f"{format_datetime(dt.now())}"
         worksheet.write(0, 0, f"Duration: {duration}")
         worksheet.write(1, 0, f"Projects: {actual_projects}")

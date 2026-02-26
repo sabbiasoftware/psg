@@ -3,11 +3,12 @@ import calendar
 from decimal import Decimal as dec
 from SheetGenerator import SheetGenerator
 from common import HourType, HourFormat, dec_to_number, format_hours, format_date
+from config import Config
 
 class SGByUser(SheetGenerator):
     MONTHLYSTANDBYLIMIT = 168
 
-    def __init__(self, config, cellFormats, standbylimit) -> None:
+    def __init__(self, config: Config, cellFormats, standbylimit) -> None:
         super().__init__(config, cellFormats)
         self.sumbyuser = {}
         self.standbylimit = standbylimit
@@ -112,7 +113,7 @@ class SGByUser(SheetGenerator):
                 total_hours[ht] = sum( [ self.sumbyuser[email][date].get(ht, 0) for date in self.sumbyuser[email] ] )
 
             # if there are filter projects configured, then filter out people with 0 hours against projects
-            if len(self.config["projects"]) > 0 and total_hours[HourType.WORK] == 0:
+            if len(self.config.Projects) > 0 and total_hours[HourType.WORK] == 0:
                 continue
 
             weekday_overtime_hours = sum( [ self.sumbyuser[email][date].get(HourType.WORK, 0) - 8 for date in self.sumbyuser[email] if self.is_working_day(date) and self.sumbyuser[email][date].get(HourType.WORK, 0) > 8 ] )
@@ -150,7 +151,7 @@ class SGByUser(SheetGenerator):
             row += 1
 
 
-        for email in sorted(self.config["users"]):
+        for email in sorted(self.config.Users):
             if email not in self.sumbyuser.keys() and f"{email}@capgemini.com" not in self.sumbyuser.keys():
                 worksheet.write(row, 0, email, self.cellFormats["datatxt"])
 

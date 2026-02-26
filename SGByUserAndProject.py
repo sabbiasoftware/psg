@@ -3,10 +3,11 @@ import calendar
 from decimal import Decimal as dec
 from SheetGenerator import SheetGenerator
 from common import HourType, dec_to_number
+from config import Config
 
 
 class SGByUserAndProject(SheetGenerator):
-    def __init__(self, config, cellFormats) -> None:
+    def __init__(self, config: Config, cellFormats) -> None:
         super().__init__(config, cellFormats)
         self.sumbyuserandproj = {}
 
@@ -78,7 +79,7 @@ class SGByUserAndProject(SheetGenerator):
                     ])
 
                 # if there are filter projects configured, then filter out people with 0 hours against projects
-                if len(self.config["projects"]) > 0 and total_hours[HourType.WORK] == 0:
+                if len(self.config.Projects) > 0 and total_hours[HourType.WORK] == 0:
                     continue
 
                 date = self.min_date

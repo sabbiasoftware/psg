@@ -10,29 +10,31 @@ import xlsxwriter
 from SGByUser import SGByUser
 from SGByUserAndProject import SGByUserAndProject
 from SGStandby import SGStandby
+from config import Config
 from common import read_strings, read_dates, HourType, HourFormat
 import traceback
 
+config = Config()
 
 # returns true if email to be processed
 def filter_email(email):
     return (
-        len(config["users"]) == 0
-        or email in config["users"]
-        or email.replace("@capgemini.com", "") in config["users"]
+        len(config.Users) == 0
+        or email in config.Users
+        or email.replace("@capgemini.com", "") in config.Users
     )
 
 
 # returns true if project to be processed
 def filter_project(project, projectdescription):
-    if len(config["projects"]) == 0:
+    if len(config.Projects) == 0:
         return True
 
     proj = project.lower()
     projdesc = projectdescription.lower()
 
     projectmatch = False
-    for p in config["projects"]:
+    for p in config.Projects:
         if p in proj or p in projdesc:
             projectmatch = True
             break
@@ -40,20 +42,21 @@ def filter_project(project, projectdescription):
     return projectmatch
 
 
-config = {
-    "users": read_strings(os.path.join("cfg", "users.txt"), do_strip=True, do_lower=True),
-    "projects": read_strings(os.path.join("cfg", "projects.txt"), do_lower=True),
-    "holidays": read_dates(os.path.join("cfg", "holidays.txt")),
-    "weekends": read_dates(os.path.join("cfg", "weekends.txt")),
-    "workingdays": read_dates(os.path.join("cfg", "workingdays.txt")),
-    "special_projects": {
-        "Approved Absence (H)": HourType.VACATION,
-        "Vacations": HourType.VACATION,
-        "Sick Leave (H)": HourType.SICK,
-        "Medical Leave": HourType.SICK,
-        "Public Holiday": HourType.HOLIDAY,
-    }
-}
+
+# = {
+#     "users": read_strings(os.path.join("cfg", "users.txt"), do_strip=True, do_lower=True),
+#     "projects": read_strings(os.path.join("cfg", "projects.txt"), do_lower=True),
+#     "holidays": read_dates(os.path.join("cfg", "holidays.txt")),
+#     "weekends": read_dates(os.path.join("cfg", "weekends.txt")),
+#     "workingdays": read_dates(os.path.join("cfg", "workingdays.txt")),
+#     "special_projects": {
+#         "Approved Absence (H)": HourType.VACATION,
+#         "Vacations": HourType.VACATION,
+#         "Sick Leave (H)": HourType.SICK,
+#         "Medical Leave": HourType.SICK,
+#         "Public Holiday": HourType.HOLIDAY,
+#     }
+# }
 
 parser = argparse.ArgumentParser("psg - Presence Sheet Generator")
 parser.add_argument(

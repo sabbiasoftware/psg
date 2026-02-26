@@ -1,0 +1,37 @@
+Offer,alexander.bodo@capgemini.com
+Offer,akos.sarkadi@capgemini.com
+Offer,istvan.sipos@capgemini.com
+Offer,attila.szecsi@capgemini.com
+Offer,tamas.csonka@capgemini.com
+Offer,gergo.remenyi@capgemini.com
+Offer,balazs.bodi@capgemini.com
+3PO L3.5,andrea.toth@capgemini.com
+3PO L3.5,zsolt.blaner@capgemini.com
+GMAL L3,dora.besenyei@capgemini.com
+MDS L4,istvan.major@capgemini.com
+MDS L4,zsolt.petercsak@capgemini.com
+MDS L4,marcell.dezso@capgemini.com
+MDS L4,marietta.miklosvary-kathy@capgemini.com
+MDS L4,gabor.kiss@capgemini.com
+ID,balazs.erdelyi@capgemini.com
+ID,tamas.a.kiss@capgemini.com
+ID,peter.lorincz@capgemini.com
+ID,gabor.egresi@capgemini.com
+ID,laszlo.szollosi@capgemini.com
+ID,patrik.bodnar@capgemini.com
+ID,szabolcs.remenyi@capgemini.com
+3PO,kristof.repasi@capgemini.com
+3PO,gergely.boros@capgemini.com
+3PO,gabor.goncz@capgemini.com
+3PO,zoltan.jakab@capgemini.com
+3PO,patrik.kun@capgemini.com
+3PO L4,adam.nangui@capgemini.com
+Account,balazs-tamas.papp@capgemini.com
+Account,viktor-mark.nagy@capgemini.com
+Account,attila.miszkuly@capgemini.com
+Account,richard-zoltan.pap@capgemini.com
+Account,sandor-adam.maroscsak@capgemini.com
+GMA,sengpraseuth.prakonkham@capgemini.com
+GMA,ferenc.vass@capgemini.com
+GMA,csaba.gyarmati@capgemini.com
+GMA,istvan.drosztmer@capgemini.com
