@@ -1,2 +1,2 @@
 py\python.exe psg.py -a -s %1
-pause
+if %ERRORLEVEL% NEQ 0 pause
