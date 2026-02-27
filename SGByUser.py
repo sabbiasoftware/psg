@@ -10,8 +10,10 @@ class SGByUser(SheetGenerator):
 
     def __init__(self, config: Config, cellFormats, standbylimit) -> None:
         super().__init__(config, cellFormats)
-        self.sumbyuser = {}
         self.standbylimit = standbylimit
+        self.sumbyuser = {}
+        self.sumstandbydec = {}
+        self.sumworkinc = {}
 
     def loadRow(self, row):
         super().loadRow(row)
@@ -50,7 +52,7 @@ class SGByUser(SheetGenerator):
                 )
 
                 if monthlystandy > self.MONTHLYSTANDBYLIMIT:
-                    print(f"Standby hours of {format_hours(monthlystandy)} in {year}-{month:02d} exceeds {self.MONTHLYSTANDBYLIMIT} hours for {email}")
+                    # print(f"Standby hours of {format_hours(monthlystandy)} in {year}-{month:02d} exceeds {self.MONTHLYSTANDBYLIMIT} hours for {email}")
                     for date in self.sumbyuser[email]:
                         if (
                             date.year == year
@@ -66,10 +68,19 @@ class SGByUser(SheetGenerator):
                                 s2 = s1 - minusstandby
                                 self.sumbyuser[email][date][HourType.WORK] = w2
                                 self.sumbyuser[email][date][HourType.STANDBY] = s2
-                                print(f"  {format_date(date)}, {email}: ({format_hours(w1)}, {format_hours(s1)}) + (+{format_hours(pluswork)}, -{format_hours(minusstandby)}) = ({format_hours(w2)}, {format_hours(s2)})")
+                                # print(f"  {format_date(date)}, {email}: ({format_hours(w1)}, {format_hours(s1)}) + (+{format_hours(pluswork)}, -{format_hours(minusstandby)}) = ({format_hours(w2)}, {format_hours(s2)})")
                                 monthlystandy -= minusstandby
+
+                                if email not in self.sumstandbydec.keys():
+                                    self.sumstandbydec[email] = {}
+                                self.sumstandbydec[email][date] = self.sumstandbydec[email].get(date, 0) - minusstandby
+
+                                if email not in self.sumworkinc.keys():
+                                    self.sumworkinc[email] = {}
+                                self.sumworkinc[email][date] = self.sumworkinc[email].get(date, 0) + pluswork
+
                                 if monthlystandy <= self.MONTHLYSTANDBYLIMIT:
-                                    print(f"  Standby hours in {year}-{month:02d} is {format_hours(monthlystandy)} hours for {email}")
+                                    # print(f"  Standby hours in {year}-{month:02d} is {format_hours(monthlystandy)} hours for {email}")
                                     break
 
                 month += 1
@@ -172,6 +183,54 @@ class SGByUser(SheetGenerator):
                 row += 1
 
         worksheet.autofilter(5, 0, row - 1, col - 1)
+
+        row += 4
+
+        if not self.standbylimit:
+            worksheet.write(row, 0, "Forcing monthly standby limit disabled")
+            return
+
+        if len(self.sumstandbydec) == 0 and len(self.sumworkinc) == 0:
+            worksheet.write(row, 0, f"Forcing monthly standby limit enabled, but monthly limit of {self.MONTHLYSTANDBYLIMIT} was not exceeded")
+            return
+
+        worksheet.write(row, 0, f"Forcing monthly standby limit enabled, monthly limit of {self.MONTHLYSTANDBYLIMIT} was exceeded")
+
+        row += 1
+
+        for email in sorted(self.sumstandbydec):
+            date = self.min_date
+            col = 9
+            while date <= self.max_date:
+                if date in self.sumstandbydec[email].keys():
+                    worksheet.write_number(row, col, self.sumstandbydec[email][date], self.cellFormats["hourFormats"][HourFormat.UNDER])
+                date = date + td(days=1)
+                col += 1
+
+            worksheet.write(row, 0, email, self.cellFormats["datatxt"])
+            worksheet.write(row, 1, self.users[email])
+            worksheet.write(row, 2, self.approvers[email])
+            s = sum([ self.sumstandbydec[email][date] for date in self.sumstandbydec[email].keys() ])
+            worksheet.write_number(row, 7, s, self.cellFormats["datanum"])
+            row += 1
+
+
+        for email in sorted(self.sumworkinc):
+            date = self.min_date
+            col = 9
+            while date <= self.max_date:
+                if date in self.sumworkinc[email].keys():
+                    worksheet.write_number(row, col, self.sumworkinc[email][date], self.cellFormats["hourFormats"][HourFormat.OVER])
+                date = date + td(days=1)
+                col += 1
+
+            worksheet.write(row, 0, email, self.cellFormats["datatxt"])
+            worksheet.write(row, 1, self.users[email])
+            worksheet.write(row, 2, self.approvers[email])
+            s = sum([ self.sumworkinc[email][date] for date in self.sumworkinc[email].keys() ])
+            worksheet.write_number(row, 8, s, self.cellFormats["datanum"])
+            row += 1
+
 
     def generateSheet(self, workbook):
         if self.standbylimit:
