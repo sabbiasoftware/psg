@@ -71,7 +71,7 @@ parser.add_argument(
 parser.add_argument(
     "filename",
     nargs="?",
-    help="timesheet in CSV format to process; if omitted, latest 'TimesheetReport_*' file is picked from user's default Download folder",
+    help="timesheet in CSV format to process; if omitted, latest 'TimesheetReport_*.txt' file is picked from user's default Download folder",
 )
 args = parser.parse_args()
 
@@ -84,7 +84,7 @@ if args.filename is not None:
         sys.exit(1)
 else:
     downloads_folder = userpaths.get_downloads()
-    matching_files = glob.glob(os.path.join(userpaths.get_downloads(), "TimesheetReport_*"))
+    matching_files = glob.glob(os.path.join(userpaths.get_downloads(), "TimesheetReport_*.txt"))
     if len(matching_files) == 0:
         print(f"Could not find any timesheet in folder: {format(downloads_folder)}")
         sys.exit(1)
