@@ -54,16 +54,20 @@ class SGByUser(SheetGenerator):
                 if monthlystandy > self.MONTHLYSTANDBYLIMIT:
                     # print(f"Standby hours of {format_hours(monthlystandy)} in {year}-{month:02d} exceeds {self.MONTHLYSTANDBYLIMIT} hours for {email}")
                     for date in self.sumbyuser[email]:
-                        if (
-                            date.year == year
-                            and date.month == month
-                        ):
-                            otmulti = 1 if self.is_working_day(date) else 2
-                            if self.sumbyuser[email][date].get(HourType.STANDBY, 0) >= 5 * otmulti:
+                        if (date.year == year and date.month == month):
+                            # exchange rate between standby and overtime hours
+                            # weekday: 15 standby = 2 overtime
+                            # weekend: 20 standby = 1 overtime
+
+                            sbyunit = 15 if self.is_working_day(date) else 10
+                            ovtunit = 2 if self.is_working_day(date) else 1
+
+                            if self.sumbyuser[email][date].get(HourType.STANDBY, 0) >= sbyunit:
                                 w1 = self.sumbyuser[email][date].get(HourType.WORK, 0)
                                 s1 = self.sumbyuser[email][date].get(HourType.STANDBY, 0)
-                                pluswork = self.sumbyuser[email][date][HourType.STANDBY] // (5 * otmulti)
-                                minusstandby = pluswork * 5 * otmulti
+                                numunit = s1 // sbyunit
+                                pluswork = numunit * ovtunit
+                                minusstandby = numunit * sbyunit
                                 w2 = w1 + pluswork
                                 s2 = s1 - minusstandby
                                 self.sumbyuser[email][date][HourType.WORK] = w2
