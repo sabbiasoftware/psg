@@ -2,7 +2,7 @@ from datetime import datetime as dt, timedelta as td
 import calendar
 from decimal import Decimal as dec
 from SheetGenerator import SheetGenerator
-from common import HourType, HourFormat, dec_to_number, format_hours, format_date
+from common import HourType, HourFormat, dec_to_number
 from config import Config
 
 class SGByUser(SheetGenerator):
@@ -110,7 +110,8 @@ class SGByUser(SheetGenerator):
             if lastmonth != date.month:
                 lastmonth = date.month
                 worksheet.write(4, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
-            worksheet.write_number(5, col, date.day, self.cellFormats["headerday"])
+            cf = self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
+            worksheet.write_number(5, col, date.day, cf)
             date = date + td(days=1)
             col += 1
 

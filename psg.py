@@ -96,6 +96,8 @@ workbook = xlsxwriter.Workbook("sum.xlsx")
 
 cellFormats = {
     "headerday": workbook.add_format({"align": "center", "bold": "true"}),
+    "headerworkday": workbook.add_format({"align": "center", "bold": "true", "font_color": "black"}),
+    "headernonworkday": workbook.add_format({"align": "center", "bold": "true", "font_color": "red"}),
     "headertxt": workbook.add_format({"align": "left", "bold": "true"}),
     "headernum": workbook.add_format({"align": "right", "bold": "true"}),
     "datatxt": workbook.add_format({"align": "left"}),
