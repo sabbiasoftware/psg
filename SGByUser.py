@@ -37,6 +37,37 @@ class SGByUser(SheetGenerator):
         self.sumbyuser[email][date][t] = self.sumbyuser[email][date].get(t, 0) + dec(row["Hours"])
 
 
+    def tryConvertingStandbyToWork(self, email, date):
+        minusstandby = 0
+
+        # exchange rate between standby and overtime hours
+        # weekday: 15 standby = 2 overtime
+        # weekend: 20 standby = 1 overtime
+        sbyunit = 15 if self.is_working_day(date) else 10
+        ovtunit = 2 if self.is_working_day(date) else 1
+
+        if self.sumbyuser[email][date].get(HourType.STANDBY, 0) >= sbyunit:
+            w1 = self.sumbyuser[email][date].get(HourType.WORK, 0)
+            s1 = self.sumbyuser[email][date].get(HourType.STANDBY, 0)
+            numunit = s1 // sbyunit
+            pluswork = numunit * ovtunit
+            minusstandby = numunit * sbyunit
+            w2 = w1 + pluswork
+            s2 = s1 - minusstandby
+            self.sumbyuser[email][date][HourType.WORK] = w2
+            self.sumbyuser[email][date][HourType.STANDBY] = s2
+
+            if email not in self.sumstandbydec.keys():
+                self.sumstandbydec[email] = {}
+            self.sumstandbydec[email][date] = self.sumstandbydec[email].get(date, 0) - minusstandby
+
+            if email not in self.sumworkinc.keys():
+                self.sumworkinc[email] = {}
+            self.sumworkinc[email][date] = self.sumworkinc[email].get(date, 0) + pluswork
+
+        return minusstandby
+
+
     def forceStandbyLimit(self):
         for email in self.sumbyuser:
             # avoid importing dateutil.relativedelta for now...
@@ -52,40 +83,22 @@ class SGByUser(SheetGenerator):
                 )
 
                 if monthlystandy > self.MONTHLYSTANDBYLIMIT:
-                    # print(f"Standby hours of {format_hours(monthlystandy)} in {year}-{month:02d} exceeds {self.MONTHLYSTANDBYLIMIT} hours for {email}")
+                    # first try converting standby hours to overtime on weekends
                     for date in self.sumbyuser[email]:
                         if (date.year == year and date.month == month):
-                            # exchange rate between standby and overtime hours
-                            # weekday: 15 standby = 2 overtime
-                            # weekend: 20 standby = 1 overtime
-
-                            sbyunit = 15 if self.is_working_day(date) else 10
-                            ovtunit = 2 if self.is_working_day(date) else 1
-
-                            if self.sumbyuser[email][date].get(HourType.STANDBY, 0) >= sbyunit:
-                                w1 = self.sumbyuser[email][date].get(HourType.WORK, 0)
-                                s1 = self.sumbyuser[email][date].get(HourType.STANDBY, 0)
-                                numunit = s1 // sbyunit
-                                pluswork = numunit * ovtunit
-                                minusstandby = numunit * sbyunit
-                                w2 = w1 + pluswork
-                                s2 = s1 - minusstandby
-                                self.sumbyuser[email][date][HourType.WORK] = w2
-                                self.sumbyuser[email][date][HourType.STANDBY] = s2
-                                # print(f"  {format_date(date)}, {email}: ({format_hours(w1)}, {format_hours(s1)}) + (+{format_hours(pluswork)}, -{format_hours(minusstandby)}) = ({format_hours(w2)}, {format_hours(s2)})")
-                                monthlystandy -= minusstandby
-
-                                if email not in self.sumstandbydec.keys():
-                                    self.sumstandbydec[email] = {}
-                                self.sumstandbydec[email][date] = self.sumstandbydec[email].get(date, 0) - minusstandby
-
-                                if email not in self.sumworkinc.keys():
-                                    self.sumworkinc[email] = {}
-                                self.sumworkinc[email][date] = self.sumworkinc[email].get(date, 0) + pluswork
-
+                            if not self.is_working_day(date):
+                                monthlystandy -= self.tryConvertingStandbyToWork(email, date)
                                 if monthlystandy <= self.MONTHLYSTANDBYLIMIT:
-                                    # print(f"  Standby hours in {year}-{month:02d} is {format_hours(monthlystandy)} hours for {email}")
                                     break
+
+                    # if limit is still exceeded, try converting standby hours to overtime on weekdays
+                    if monthlystandy > self.MONTHLYSTANDBYLIMIT:
+                        for date in self.sumbyuser[email]:
+                            if (date.year == year and date.month == month):
+                                if self.is_working_day(date):
+                                    monthlystandy -= self.tryConvertingStandbyToWork(email, date)
+                                    if monthlystandy <= self.MONTHLYSTANDBYLIMIT:
+                                        break
 
                 month += 1
                 if month == 13:
