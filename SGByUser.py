@@ -105,6 +105,19 @@ class SGByUser(SheetGenerator):
                     year += 1
                     month = 1
 
+    def generateHeaderDays(self, worksheet, row, col):
+        date = self.min_date
+        lastmonth = 0
+        while date <= self.max_date:
+            if lastmonth != date.month:
+                lastmonth = date.month
+                worksheet.write(row - 1, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
+            cf = self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
+            worksheet.write_number(row, col, date.day, cf)
+            date = date + td(days=1)
+            col += 1
+
+
     def generateHeader(self, worksheet):
         worksheet.write(5, 0, "Name", self.cellFormats["headertxt"])
         worksheet.write(5, 1, "User", self.cellFormats["headertxt"])
@@ -116,22 +129,12 @@ class SGByUser(SheetGenerator):
         worksheet.write(5, 7, "OverH", self.cellFormats["headernum"])
         worksheet.write(5, 8, "StbyH", self.cellFormats["headernum"])
 
-        date = self.min_date
-        lastmonth = 0
-        col = 9
-        while date <= self.max_date:
-            if lastmonth != date.month:
-                lastmonth = date.month
-                worksheet.write(4, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
-            cf = self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
-            worksheet.write_number(5, col, date.day, cf)
-            date = date + td(days=1)
-            col += 1
+        self.generateHeaderDays(worksheet, 5, 9)
 
         worksheet.set_column(0, 0, width=40)
         worksheet.set_column(1, 2, width=24)
         worksheet.set_column(3, 8, width=8)
-        worksheet.set_column(9, col - 1, width=6)
+        worksheet.set_column(9, 9 + (self.max_date - self.min_date).days, width=6)
 
     def generateData(self, worksheet):
         row = 6
@@ -202,7 +205,9 @@ class SGByUser(SheetGenerator):
 
         worksheet.autofilter(5, 0, row - 1, col - 1)
 
-        row += 4
+
+    def generateStandbyAdjustmentTitle(self, worksheet):
+        row = len(sorted(self.sumbyuser.keys())) + 9
 
         if not self.standbylimit:
             worksheet.write(row, 0, "Forcing monthly standby limit disabled")
@@ -214,40 +219,69 @@ class SGByUser(SheetGenerator):
 
         worksheet.write(row, 0, f"Forcing monthly standby limit enabled, monthly limit of {self.MONTHLYSTANDBYLIMIT} was exceeded")
 
-        row += 1
+
+    def generateStandbyAdjustmentHeader(self, worksheet):
+        row = len(sorted(self.sumbyuser.keys())) + 10
+        worksheet.write(row, 0, "Name", self.cellFormats["headertxt"])
+        worksheet.write(row, 1, "User", self.cellFormats["headertxt"])
+        worksheet.write(row, 2, "Approver", self.cellFormats["headertxt"])
+        worksheet.write(row, 3, "Comment", self.cellFormats["headertxt"])
+        self.generateHeaderDays(worksheet, row, 9)
+
+
+    def generateStandbyAdjustmentData(self, worksheet):
+        row = len(sorted(self.sumbyuser.keys())) + 11
 
         for email in sorted(self.sumstandbydec):
+
+            worksheet.write(row + 0, 3, "Standby before")
+            worksheet.write(row + 1, 3, "Standby reduction")
+            worksheet.write(row + 2, 3, "Standby after")
+            worksheet.write(row + 3, 3, "Work before")
+            worksheet.write(row + 4, 3, "Work addition")
+            worksheet.write(row + 5, 3, "Work after")
+
             date = self.min_date
             col = 9
             while date <= self.max_date:
+                standbyafter = 0
+                workafter = 0
+
+                if date in self.sumbyuser[email].keys():
+                    standbyafter = self.sumbyuser[email][date].get(HourType.STANDBY, 0)
+                    if standbyafter > 0:
+                        worksheet.write_number(row + 0, col, standbyafter, self.cellFormats["hourFormats"][HourFormat.STANDBY])
+                        worksheet.write_number(row + 2, col, standbyafter, self.cellFormats["hourFormats"][HourFormat.STANDBY])
+
+                    workafter = self.sumbyuser[email][date].get(HourType.WORK, 0)
+                    if workafter > 0:
+                        worksheet.write_number(row + 3, col, workafter, self.cellFormats["hourFormats"][HourFormat.WORK])
+                        worksheet.write_number(row + 5, col, workafter, self.cellFormats["hourFormats"][HourFormat.WORK])
+
                 if date in self.sumstandbydec[email].keys():
-                    worksheet.write_number(row, col, self.sumstandbydec[email][date], self.cellFormats["hourFormats"][HourFormat.UNDER])
+                    standbyreduction = self.sumstandbydec[email][date]
+                    worksheet.write_number(row + 1, col, standbyreduction, self.cellFormats["hourFormats"][HourFormat.EMPTY])
+                    worksheet.write_number(row + 0, col, standbyafter - standbyreduction, self.cellFormats["hourFormats"][HourFormat.STANDBY] )
+
+                if date in self.sumworkinc[email].keys():
+                    workaddition = self.sumworkinc[email][date]
+                    worksheet.write_number(row + 4, col, workaddition, self.cellFormats["hourFormats"][HourFormat.EMPTY])
+                    if workafter - workaddition >= 0:
+                        worksheet.write_number(row + 3, col, workafter - workaddition, self.cellFormats["hourFormats"][HourFormat.WORK])
+
                 date = date + td(days=1)
                 col += 1
 
-            worksheet.write(row, 0, email, self.cellFormats["datatxt"])
-            worksheet.write(row, 1, self.users[email])
-            worksheet.write(row, 2, self.approvers[email])
+            for rd in range(0, 6):
+                worksheet.write(row + rd, 0, email, self.cellFormats["datatxt"])
+                worksheet.write(row + rd, 1, self.users[email])
+                worksheet.write(row + rd, 2, self.approvers[email])
             s = sum([ self.sumstandbydec[email][date] for date in self.sumstandbydec[email].keys() ])
             worksheet.write_number(row, 7, s, self.cellFormats["datanum"])
-            row += 1
 
+            row += 6
 
-        for email in sorted(self.sumworkinc):
-            date = self.min_date
-            col = 9
-            while date <= self.max_date:
-                if date in self.sumworkinc[email].keys():
-                    worksheet.write_number(row, col, self.sumworkinc[email][date], self.cellFormats["hourFormats"][HourFormat.OVER])
-                date = date + td(days=1)
-                col += 1
-
-            worksheet.write(row, 0, email, self.cellFormats["datatxt"])
-            worksheet.write(row, 1, self.users[email])
-            worksheet.write(row, 2, self.approvers[email])
-            s = sum([ self.sumworkinc[email][date] for date in self.sumworkinc[email].keys() ])
-            worksheet.write_number(row, 8, s, self.cellFormats["datanum"])
-            row += 1
+        # worksheet.autofilter(len(sorted(self.sumbyuser.keys())) + 10, 0, row - 6, 9 + (self.max_date - self.min_date).days)
 
 
     def generateSheet(self, workbook):
@@ -257,3 +291,6 @@ class SGByUser(SheetGenerator):
         self.generateTitle(worksheet)
         self.generateHeader(worksheet)
         self.generateData(worksheet)
+        self.generateStandbyAdjustmentTitle(worksheet)
+        self.generateStandbyAdjustmentHeader(worksheet)
+        self.generateStandbyAdjustmentData(worksheet)

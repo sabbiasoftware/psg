@@ -111,7 +111,7 @@ cellFormats = {
         HourFormat.MISS: workbook.add_format( {"align": "center", "bg_color": "#d3d3d3"} ),
         HourFormat.QUESTION: workbook.add_format( {"align": "center", "bg_color": "#808080"} ),
         HourFormat.EMPTY: workbook.add_format( {"align": "center", "bg_color": "#ffffff"} ),
-        HourFormat.STANDBY: workbook.add_format( {"align": "center", "bg_color": "#ffa500"} )
+        HourFormat.STANDBY: workbook.add_format( {"align": "center", "bg_color": "#9090ee"} )
     },
 }
 
