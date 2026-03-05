@@ -8,21 +8,19 @@ import userpaths
 import csv
 import xlsxwriter
 from SGByUser import SGByUser
+from SGStandbyChanges import SGStandbyChanges
 from SGByUserAndProject import SGByUserAndProject
 from SGStandby import SGStandby
 from config import Config
-from common import read_strings, read_dates, HourType, HourFormat
+from common import HourFormat
 import traceback
 
 config = Config()
 
+
 # returns true if email to be processed
 def filter_email(email):
-    return (
-        len(config.Users) == 0
-        or email in config.Users
-        or email.replace("@capgemini.com", "") in config.Users
-    )
+    return len(config.Users) == 0 or email in config.Users or email.replace("@capgemini.com", "") in config.Users
 
 
 # returns true if project to be processed
@@ -40,7 +38,6 @@ def filter_project(project, projectdescription):
             break
 
     return projectmatch
-
 
 
 # = {
@@ -65,9 +62,7 @@ parser.add_argument(
     action="store_true",
     help="automatically open generated file with Excel/Writer",
 )
-parser.add_argument(
-    "-s", "--standbylimit", action="store_true", help="force monthly standby limit"
-)
+parser.add_argument("-s", "--standbylimit", action="store_true", help="force monthly standby limit")
 parser.add_argument(
     "filename",
     nargs="?",
@@ -103,22 +98,23 @@ cellFormats = {
     "datatxt": workbook.add_format({"align": "left"}),
     "datanum": workbook.add_format({"align": "right"}),
     "hourFormats": {
-        HourFormat.WORK: workbook.add_format( {"align": "center", "bg_color": "#90ee90"} ),
-        HourFormat.UNDER: workbook.add_format( {"align": "center", "bg_color": "#9acd32"} ),
-        HourFormat.OVER: workbook.add_format( {"align": "center", "bg_color": "#ffa500"} ),
-        HourFormat.VACATION: workbook.add_format( {"align": "center", "bg_color": "#ffff00"} ),
-        HourFormat.SICK: workbook.add_format( {"align": "center", "bg_color": "#da70d6"} ),
-        HourFormat.MISS: workbook.add_format( {"align": "center", "bg_color": "#d3d3d3"} ),
-        HourFormat.QUESTION: workbook.add_format( {"align": "center", "bg_color": "#808080"} ),
-        HourFormat.EMPTY: workbook.add_format( {"align": "center", "bg_color": "#ffffff"} ),
-        HourFormat.STANDBY: workbook.add_format( {"align": "center", "bg_color": "#9090ee"} )
+        HourFormat.WORK: workbook.add_format({"align": "center", "bg_color": "#90ee90"}),
+        HourFormat.UNDER: workbook.add_format({"align": "center", "bg_color": "#9acd32"}),
+        HourFormat.OVER: workbook.add_format({"align": "center", "bg_color": "#ffa500"}),
+        HourFormat.VACATION: workbook.add_format({"align": "center", "bg_color": "#ffff00"}),
+        HourFormat.SICK: workbook.add_format({"align": "center", "bg_color": "#da70d6"}),
+        HourFormat.MISS: workbook.add_format({"align": "center", "bg_color": "#d3d3d3"}),
+        HourFormat.QUESTION: workbook.add_format({"align": "center", "bg_color": "#808080"}),
+        HourFormat.EMPTY: workbook.add_format({"align": "center", "bg_color": "#ffffff"}),
+        HourFormat.STANDBY: workbook.add_format({"align": "center", "bg_color": "#9090ee"}),
     },
 }
 
 sheetGenerators = [
     SGByUser(config, cellFormats, args.standbylimit),
+    SGStandbyChanges(config, cellFormats, args.standbylimit),
     SGByUserAndProject(config, cellFormats),
-    SGStandby(config, cellFormats)
+    SGStandby(config, cellFormats),
 ]
 
 try:
@@ -161,3 +157,5 @@ if args.autoopen:
         # subprocess.Popen(["start", "excel", "sum.xlsx"])
     elif sys.platform == "linux":
         subprocess.Popen(["libreoffice", "--calc", "sum.xlsx"])
+
+# print(sys.path)
