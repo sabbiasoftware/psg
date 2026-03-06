@@ -1,4 +1,9 @@
 import os
+import sys
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+if script_dir and script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
 
 BASEURI = "https://raw.githubusercontent.com/sabbiasoftware/psg/refs/heads/main/"
 PATCHFILESNAME = "patchfiles.txt"
