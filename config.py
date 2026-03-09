@@ -1,4 +1,5 @@
 import os
+import csv
 from common import read_strings, read_dates, HourType
 
 class Config:
@@ -26,3 +27,17 @@ class Config:
             email = fields[1].lower()
             if email not in self.Hotlines.keys():
                 self.Hotlines[email] = hotline
+
+        self.UserData = {}
+        with open(os.path.join("cfg", "userdata.csv"), "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f, delimiter="\t")
+            for row in reader:
+                email = row["Work Email"].strip()
+                if not email:
+                    continue
+                self.UserData[email.lower()] = {
+                    "Employment Status": row["Employment Status"],
+                    "Reporting to": row["Reporting to"],
+                    "Job Title": row["Job Title"],
+                    "Global Grade": row["Global Grade"]
+                }

@@ -7,8 +7,9 @@ from config import Config
 
 
 class SGStandby(SheetGenerator):
-    def __init__(self, config: Config, cellFormats) -> None:
+    def __init__(self, config: Config, cellFormats, managerFromConfig) -> None:
         super().__init__(config, cellFormats)
+        self.managerFromConfig = managerFromConfig
         self.sumstandby = {}
         self.sumhotline = {}
 
@@ -33,7 +34,9 @@ class SGStandby(SheetGenerator):
             hotline = self.config.Hotlines.get(email, "?")
             if (hotline, email, project) not in self.sumstandby.keys():
                 self.sumstandby[hotline, email, project] = {}
-            self.sumstandby[hotline, email, project][date] = self.sumstandby[hotline, email, project].get(date, 0) + dec(row["Hours"])
+            self.sumstandby[hotline, email, project][date] = self.sumstandby[hotline, email, project].get(
+                date, 0
+            ) + dec(row["Hours"])
 
             if hotline not in self.sumhotline.keys():
                 self.sumhotline[hotline] = {}
@@ -43,7 +46,7 @@ class SGStandby(SheetGenerator):
         worksheet.write(5, 0, "Hotline", self.cellFormats["headertxt"])
         worksheet.write(5, 1, "Name", self.cellFormats["headertxt"])
         worksheet.write(5, 2, "User", self.cellFormats["headertxt"])
-        worksheet.write(5, 3, "Approver", self.cellFormats["headertxt"])
+        worksheet.write(5, 3, "Manager", self.cellFormats["headertxt"])
         worksheet.write(5, 4, "Project", self.cellFormats["headertxt"])
         worksheet.write(5, 5, "StbyH", self.cellFormats["headernum"])
 
@@ -54,7 +57,9 @@ class SGStandby(SheetGenerator):
             if lastmonth != date.month:
                 lastmonth = date.month
                 worksheet.write(4, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
-            cf = self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
+            cf = (
+                self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
+            )
             worksheet.write_number(5, col, date.day, cf)
             date = date + td(days=1)
             col += 1
@@ -78,22 +83,37 @@ class SGStandby(SheetGenerator):
                     hours = self.sumstandby[hotline, email, project][date]
 
                 if hours > 0:
-                    worksheet.write_number(row, col, dec_to_number(hours), self.cellFormats["hourFormats"][HourFormat.STANDBY])
+                    worksheet.write_number(
+                        row, col, dec_to_number(hours), self.cellFormats["hourFormats"][HourFormat.STANDBY]
+                    )
 
                 date = date + td(days=1)
                 col += 1
 
+            manager = self.approvers[email]
+            if self.managerFromConfig:
+                if email in self.config.UserData.keys():
+                    manager = self.config.UserData[email]["Reporting to"]
+
             worksheet.write(row, 0, hotline)
             worksheet.write(row, 1, email, self.cellFormats["datatxt"])
             worksheet.write(row, 2, self.users[email])
-            worksheet.write(row, 3, self.approvers[email])
+            worksheet.write(row, 3, manager)
             worksheet.write(row, 4, project)
-            worksheet.write(row, 5, sum([ self.sumstandby[hotline, email, project][date] for date in self.sumstandby[hotline, email, project].keys() ]))
+            worksheet.write(
+                row,
+                5,
+                sum(
+                    [
+                        self.sumstandby[hotline, email, project][date]
+                        for date in self.sumstandby[hotline, email, project].keys()
+                    ]
+                ),
+            )
 
             row += 1
 
         worksheet.autofilter(5, 0, row - 1, col - 1)
-
 
         row += 4
         for hotline in sorted(self.sumhotline.keys()):
@@ -115,10 +135,9 @@ class SGStandby(SheetGenerator):
                 col += 1
 
             worksheet.write(row, 0, hotline)
-            worksheet.write(row, 5, sum([ self.sumhotline[hotline][date] for date in self.sumhotline[hotline].keys() ]))
+            worksheet.write(row, 5, sum([self.sumhotline[hotline][date] for date in self.sumhotline[hotline].keys()]))
 
             row += 1
-
 
     def generateSheet(self, workbook):
         worksheet = workbook.add_worksheet("Standby")

@@ -69,6 +69,9 @@ parser.add_argument(
 )
 parser.add_argument("-s", "--standbylimit", action="store_true", help="force monthly standby limit")
 parser.add_argument(
+    "-m", "--managerfromconfig", action="store_true", help="override manager with manager found in userdata.csv"
+)
+parser.add_argument(
     "filename",
     nargs="?",
     help="timesheet in CSV format to process; if omitted, latest 'TimesheetReport_*.txt' file is picked from user's default Download folder",
@@ -116,10 +119,10 @@ cellFormats = {
 }
 
 sheetGenerators = [
-    SGByUser(config, cellFormats, args.standbylimit),
-    SGStandbyChanges(config, cellFormats, args.standbylimit),
-    SGByUserAndProject(config, cellFormats),
-    SGStandby(config, cellFormats),
+    SGByUser(config, cellFormats, args.standbylimit, args.managerfromconfig),
+    SGStandbyChanges(config, cellFormats, args.standbylimit, args.managerfromconfig),
+    SGByUserAndProject(config, cellFormats, args.managerfromconfig),
+    SGStandby(config, cellFormats, args.managerfromconfig),
 ]
 
 try:

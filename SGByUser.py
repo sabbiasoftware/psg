@@ -7,8 +7,9 @@ from config import Config
 
 
 class SGByUser(SGStandbyLimiter):
-    def __init__(self, config: Config, cellFormats, standbylimit) -> None:
+    def __init__(self, config: Config, cellFormats, standbylimit, managerFromConfig) -> None:
         super().__init__(config, cellFormats, standbylimit)
+        self.managerFromConfig = managerFromConfig
 
     def generateHeaderDays(self, worksheet, row, col):
         date = self.min_date
@@ -27,7 +28,7 @@ class SGByUser(SGStandbyLimiter):
     def generateHeader(self, worksheet):
         worksheet.write(5, 0, "Name", self.cellFormats["headertxt"])
         worksheet.write(5, 1, "User", self.cellFormats["headertxt"])
-        worksheet.write(5, 2, "Approver", self.cellFormats["headertxt"])
+        worksheet.write(5, 2, "Manager", self.cellFormats["headertxt"])
         worksheet.write(5, 3, "WorkH", self.cellFormats["headernum"])
         worksheet.write(5, 4, "WorkD", self.cellFormats["headernum"])
         worksheet.write(5, 5, "VacaD", self.cellFormats["headernum"])
@@ -88,9 +89,14 @@ class SGByUser(SGStandbyLimiter):
                 date = date + td(days=1)
                 col += 1
 
+            manager = self.approvers[email]
+            if self.managerFromConfig:
+                if email in self.config.UserData.keys():
+                    manager = self.config.UserData[email]["Reporting to"]
+
             worksheet.write(row, 0, email, self.cellFormats["datatxt"])
             worksheet.write(row, 1, self.users[email])
-            worksheet.write(row, 2, self.approvers[email])
+            worksheet.write(row, 2, manager)
             worksheet.write_number(row, 3, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
             worksheet.write_number(
                 row, 4, int((total_hours[HourType.WORK] - overtime_hours) // dec(8)), self.cellFormats["datanum"]

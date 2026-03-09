@@ -1,10 +1,15 @@
 from datetime import timedelta as td
 import calendar
 from common import HourType, HourFormat
+from config import Config
 from SGStandbyLimiter import SGStandbyLimiter
 
 
 class SGStandbyChanges(SGStandbyLimiter):
+    def __init__(self, config: Config, cellFormats, standbylimit, managerFromConfig) -> None:
+        super().__init__(config, cellFormats, standbylimit)
+        self.managerFromConfig = managerFromConfig
+
     def generateHeaderDays(self, worksheet, row, col):
         date = self.min_date
         lastmonth = 0
@@ -42,7 +47,7 @@ class SGStandbyChanges(SGStandbyLimiter):
         row = 1
         worksheet.write(row, 0, "Name", self.cellFormats["headertxt"])
         worksheet.write(row, 1, "User", self.cellFormats["headertxt"])
-        worksheet.write(row, 2, "Approver", self.cellFormats["headertxt"])
+        worksheet.write(row, 2, "Manager", self.cellFormats["headertxt"])
         worksheet.write(row, 3, "Comment", self.cellFormats["headertxt"])
         worksheet.write(row, 4, "StbyH-", self.cellFormats["headernum"])
         worksheet.write(row, 5, "Work+", self.cellFormats["headernum"])
@@ -122,10 +127,15 @@ class SGStandbyChanges(SGStandbyLimiter):
                 date = date + td(days=1)
                 col += 1
 
+            manager = self.approvers[email]
+            if self.managerFromConfig:
+                if email in self.config.UserData.keys():
+                    manager = self.config.UserData[email]["Reporting to"]
+
             for rd in range(0, 6):
                 worksheet.write(row + rd, 0, email, self.cellFormats["datatxt"])
                 worksheet.write(row + rd, 1, self.users[email])
-                worksheet.write(row + rd, 2, self.approvers[email])
+                worksheet.write(row + rd, 2, manager)
 
             s = sum([self.sumstandbydec[email][date] for date in self.sumstandbydec[email].keys()])
             worksheet.write_number(row + 1, 4, s, self.cellFormats["datanum"])
