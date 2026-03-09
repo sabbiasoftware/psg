@@ -42,15 +42,18 @@ class SGByUserAndProject(SheetGenerator):
         worksheet.write(5, 0, "Name", self.cellFormats["headertxt"])
         worksheet.write(5, 1, "User", self.cellFormats["headertxt"])
         worksheet.write(5, 2, "Manager", self.cellFormats["headertxt"])
-        worksheet.write(5, 3, "Project", self.cellFormats["headertxt"])
-        worksheet.write(5, 4, "Activity", self.cellFormats["headertxt"])
-        worksheet.write(5, 5, "WorkH", self.cellFormats["headernum"])
-        worksheet.write(5, 6, "VacaD", self.cellFormats["headernum"])
-        worksheet.write(5, 7, "SickD", self.cellFormats["headernum"])
+        worksheet.write(5, 3, "Status", self.cellFormats["headertxt"])
+        worksheet.write(5, 4, "Job Title", self.cellFormats["headertxt"])
+        worksheet.write(5, 5, "Grade", self.cellFormats["headertxt"])
+        worksheet.write(5, 6, "Project", self.cellFormats["headertxt"])
+        worksheet.write(5, 7, "Activity", self.cellFormats["headertxt"])
+        worksheet.write(5, 8, "WorkH", self.cellFormats["headernum"])
+        worksheet.write(5, 9, "VacaD", self.cellFormats["headernum"])
+        worksheet.write(5, 10, "SickD", self.cellFormats["headernum"])
 
         date = self.min_date
         lastmonth = 0
-        col = 8
+        col = 11
         while date <= self.max_date:
             if lastmonth != date.month:
                 lastmonth = date.month
@@ -64,14 +67,17 @@ class SGByUserAndProject(SheetGenerator):
 
         worksheet.set_column(0, 0, width=40)
         worksheet.set_column(1, 2, width=24)
-        worksheet.set_column(3, 3, width=48)
-        worksheet.set_column(4, 4, width=12)
-        worksheet.set_column(5, 7, width=8)
-        worksheet.set_column(8, col - 1, width=6)
+        worksheet.set_column(3, 3, width=12)
+        worksheet.set_column(4, 4, width=40)
+        worksheet.set_column(5, 5, width=12)
+        worksheet.set_column(6, 6, width=48)
+        worksheet.set_column(7, 7, width=12)
+        worksheet.set_column(8, 10, width=8)
+        worksheet.set_column(11, col - 1, width=6)
 
     def generateData(self, worksheet):
         row = 6
-        col = 8
+        col = 11
         for email, project, activity in sorted(self.sumbyuserandproj.keys()):
             if self.get_hour_type(project, activity) != HourType.STANDBY:
                 total_hours = {}
@@ -88,7 +94,7 @@ class SGByUserAndProject(SheetGenerator):
                     continue
 
                 date = self.min_date
-                col = 8
+                col = 11
                 while date <= self.max_date:
                     hours = {}
                     if date in self.sumbyuserandproj[email, project, activity].keys():
@@ -114,13 +120,17 @@ class SGByUserAndProject(SheetGenerator):
                 worksheet.write(row, 0, email, self.cellFormats["datatxt"])
                 worksheet.write(row, 1, self.users[email])
                 worksheet.write(row, 2, manager)
-                worksheet.write(row, 3, project)
-                worksheet.write(row, 4, activity)
-                worksheet.write_number(row, 5, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
+                if email in self.config.UserData.keys():
+                    worksheet.write(row, 3, self.config.UserData[email].get("Employment Status", ""))
+                    worksheet.write(row, 4, self.config.UserData[email].get("Job Title", ""))
+                    worksheet.write(row, 5, self.config.UserData[email].get("Global Grade", ""))
+                worksheet.write(row, 6, project)
+                worksheet.write(row, 7, activity)
+                worksheet.write_number(row, 8, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
                 worksheet.write_number(
-                    row, 6, int(total_hours[HourType.VACATION] // dec(8)), self.cellFormats["datanum"]
+                    row, 9, int(total_hours[HourType.VACATION] // dec(8)), self.cellFormats["datanum"]
                 )
-                worksheet.write_number(row, 7, int(total_hours[HourType.SICK] // dec(8)), self.cellFormats["datanum"])
+                worksheet.write_number(row, 10, int(total_hours[HourType.SICK] // dec(8)), self.cellFormats["datanum"])
 
                 row += 1
 
