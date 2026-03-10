@@ -18,26 +18,30 @@ class Config:
         }
 
         self.Hotlines = {}
-        hotlines = read_strings(os.path.join("cfg", "hotlines.txt"), do_strip=True)
-        for row in hotlines:
-            fields = row.split(",")
-            if len(fields) != 2:
-                continue
-            hotline = fields[0]
-            email = fields[1].lower()
-            if email not in self.Hotlines.keys():
-                self.Hotlines[email] = hotline
+        fnhotlines = os.path.join("cfg", "hotlines.txt")
+        if os.path.exists(fnhotlines):
+            hotlines = read_strings(fnhotlines, do_strip=True)
+            for row in hotlines:
+                fields = row.split(",")
+                if len(fields) != 2:
+                    continue
+                hotline = fields[0]
+                email = fields[1].lower()
+                if email not in self.Hotlines.keys():
+                    self.Hotlines[email] = hotline
 
         self.UserData = {}
-        with open(os.path.join("cfg", "userdata.csv"), "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f, delimiter="\t")
-            for row in reader:
-                email = row["Work Email"].strip()
-                if not email:
-                    continue
-                self.UserData[email.lower()] = {
-                    "Employment Status": row["Employment Status"],
-                    "Reporting to": row["Reporting to"],
-                    "Job Title": row["Job Title"],
-                    "Global Grade": row["Global Grade"]
-                }
+        fnuserdata = os.path.join("cfg", "userdata.csv")
+        if os.path.exists(fnuserdata):
+            with open(fnuserdata, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f, delimiter="\t")
+                for row in reader:
+                    email = row["Work Email"].strip()
+                    if not email:
+                        continue
+                    self.UserData[email.lower()] = {
+                        "Employment Status": row["Employment Status"],
+                        "Reporting to": row["Reporting to"],
+                        "Job Title": row["Job Title"],
+                        "Global Grade": row["Global Grade"]
+                    }

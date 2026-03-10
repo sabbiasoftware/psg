@@ -40,4 +40,4 @@ for fn in [
     Path(os.path.join(reldir, "cfg", fn)).touch()
 
 os.system(f"{zipcmd} a -tzip -r {reldir}.zip {reldir}")
-#shutil.rmtree(reldir)
+shutil.rmtree(reldir)
