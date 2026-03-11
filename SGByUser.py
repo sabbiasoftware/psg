@@ -1,5 +1,4 @@
 from datetime import timedelta as td
-import calendar
 from decimal import Decimal as dec
 from SGStandbyLimiter import SGStandbyLimiter
 from common import HourType, HourFormat, dec_to_number
@@ -11,37 +10,11 @@ class SGByUser(SGStandbyLimiter):
         super().__init__(config, cellFormats, standbylimit)
         self.managerFromConfig = managerFromConfig
 
-    def generateHeaderDays(self, worksheet, row, col):
-        date = self.min_date
-        lastmonth = 0
-        while date <= self.max_date:
-            if lastmonth != date.month:
-                lastmonth = date.month
-                worksheet.write(row - 1, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
-            cf = (
-                self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
-            )
-            worksheet.write_number(row, col, date.day, cf)
-            date = date + td(days=1)
-            col += 1
-
     def generateHeader(self, worksheet):
-        worksheet.write(5, 0, "Name", self.cellFormats["headertxt"])
-        worksheet.write(5, 1, "User", self.cellFormats["headertxt"])
-        worksheet.write(5, 2, "Manager", self.cellFormats["headertxt"])
-        worksheet.write(5, 3, "WorkH", self.cellFormats["headernum"])
-        worksheet.write(5, 4, "WorkD", self.cellFormats["headernum"])
-        worksheet.write(5, 5, "VacaD", self.cellFormats["headernum"])
-        worksheet.write(5, 6, "SickD", self.cellFormats["headernum"])
-        worksheet.write(5, 7, "OverH", self.cellFormats["headernum"])
-        worksheet.write(5, 8, "StbyH", self.cellFormats["headernum"])
-
+        self.generateCommonColumnHeaders(worksheet, 5, 0)
+        for i, headerText in enumerate(["WorkH", "WorkD", "VacaD", "SickD", "OverH", "StbyH"]):
+            self.generateColumnHeader(worksheet, 5, 3 + i, headerText, self.cellFormats["headernum"], 8)
         self.generateHeaderDays(worksheet, 5, 9)
-
-        worksheet.set_column(0, 0, width=40)
-        worksheet.set_column(1, 2, width=24)
-        worksheet.set_column(3, 8, width=8)
-        worksheet.set_column(9, 9 + (self.max_date - self.min_date).days, width=6)
 
     def generateData(self, worksheet):
         row = 6
@@ -133,7 +106,7 @@ class SGByUser(SGStandbyLimiter):
     def generateSheet(self, workbook):
         if self.standbylimit:
             self.forceStandbyLimit()
-        worksheet = workbook.add_worksheet("By user")
+        worksheet = workbook.add_worksheet("Payroll (summary)")
         self.generateTitle(worksheet)
         self.generateHeader(worksheet)
         self.generateData(worksheet)

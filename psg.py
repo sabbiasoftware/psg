@@ -16,6 +16,7 @@ from SGByUser import SGByUser
 from SGStandbyChanges import SGStandbyChanges
 from SGByUserAndProject import SGByUserAndProject
 from SGStandby import SGStandby
+from SGInfo import SGInfo
 from config import Config
 from common import HourFormat
 import traceback
@@ -123,6 +124,7 @@ sheetGenerators = [
     SGStandbyChanges(config, cellFormats, args.standbylimit, args.managerfromconfig),
     SGByUserAndProject(config, cellFormats, args.managerfromconfig),
     SGStandby(config, cellFormats, args.managerfromconfig),
+    SGInfo(config, cellFormats, False),
 ]
 
 try:

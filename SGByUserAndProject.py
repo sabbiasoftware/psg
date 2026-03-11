@@ -1,14 +1,13 @@
 from datetime import datetime as dt, timedelta as td
-import calendar
 from decimal import Decimal as dec
-from SheetGenerator import SheetGenerator
+from SGStandbyLimiter import SGStandbyLimiter
 from common import HourType, dec_to_number
 from config import Config
 
 
-class SGByUserAndProject(SheetGenerator):
+class SGByUserAndProject(SGStandbyLimiter):
     def __init__(self, config: Config, cellFormats, managerFromConfig) -> None:
-        super().__init__(config, cellFormats)
+        super().__init__(config, cellFormats, False)
         self.managerFromConfig = managerFromConfig
         self.sumbyuserandproj = {}
 
@@ -39,41 +38,15 @@ class SGByUserAndProject(SheetGenerator):
         ].get(t, 0) + dec(row["Hours"])
 
     def generateHeader(self, worksheet):
-        worksheet.write(5, 0, "Name", self.cellFormats["headertxt"])
-        worksheet.write(5, 1, "User", self.cellFormats["headertxt"])
-        worksheet.write(5, 2, "Manager", self.cellFormats["headertxt"])
-        worksheet.write(5, 3, "Status", self.cellFormats["headertxt"])
-        worksheet.write(5, 4, "Job Title", self.cellFormats["headertxt"])
-        worksheet.write(5, 5, "Grade", self.cellFormats["headertxt"])
-        worksheet.write(5, 6, "Project", self.cellFormats["headertxt"])
-        worksheet.write(5, 7, "Activity", self.cellFormats["headertxt"])
-        worksheet.write(5, 8, "WorkH", self.cellFormats["headernum"])
-        worksheet.write(5, 9, "VacaD", self.cellFormats["headernum"])
-        worksheet.write(5, 10, "SickD", self.cellFormats["headernum"])
-
-        date = self.min_date
-        lastmonth = 0
-        col = 11
-        while date <= self.max_date:
-            if lastmonth != date.month:
-                lastmonth = date.month
-                worksheet.write(4, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
-            cf = (
-                self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
-            )
-            worksheet.write_number(5, col, date.day, cf)
-            date = date + td(days=1)
-            col += 1
-
-        worksheet.set_column(0, 0, width=40)
-        worksheet.set_column(1, 2, width=24)
-        worksheet.set_column(3, 3, width=12)
-        worksheet.set_column(4, 4, width=40)
-        worksheet.set_column(5, 5, width=12)
-        worksheet.set_column(6, 6, width=48)
-        worksheet.set_column(7, 7, width=12)
-        worksheet.set_column(8, 10, width=8)
-        worksheet.set_column(11, col - 1, width=6)
+        self.generateCommonColumnHeaders(worksheet, 5, 0)
+        self.generateColumnHeader(worksheet, 5, 3, "Status", self.cellFormats["headertxt"], 12)
+        self.generateColumnHeader(worksheet, 5, 4, "Job Title", self.cellFormats["headertxt"], 40)
+        self.generateColumnHeader(worksheet, 5, 5, "Grade", self.cellFormats["headertxt"], 12)
+        self.generateColumnHeader(worksheet, 5, 6, "Project", self.cellFormats["headertxt"], 48)
+        self.generateColumnHeader(worksheet, 5, 7, "Activity", self.cellFormats["headertxt"], 12)
+        for i, headerText in enumerate(["WorkH", "VacaD", "SickD"]):
+            self.generateColumnHeader(worksheet, 5, 8 + i, headerText, self.cellFormats["headernum"], 8)
+        self.generateHeaderDays(worksheet, 5, 11)
 
     def generateData(self, worksheet):
         row = 6
@@ -137,7 +110,7 @@ class SGByUserAndProject(SheetGenerator):
         worksheet.autofilter(5, 0, row - 1, col - 1)
 
     def generateSheet(self, workbook):
-        worksheet = workbook.add_worksheet("By user and project")
+        worksheet = workbook.add_worksheet("Project details")
         self.generateTitle(worksheet)
         self.generateHeader(worksheet)
         self.generateData(worksheet)

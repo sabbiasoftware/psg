@@ -1,5 +1,4 @@
 from datetime import timedelta as td
-import calendar
 from common import HourType, HourFormat
 from config import Config
 from SGStandbyLimiter import SGStandbyLimiter
@@ -9,20 +8,6 @@ class SGStandbyChanges(SGStandbyLimiter):
     def __init__(self, config: Config, cellFormats, standbylimit, managerFromConfig) -> None:
         super().__init__(config, cellFormats, standbylimit)
         self.managerFromConfig = managerFromConfig
-
-    def generateHeaderDays(self, worksheet, row, col):
-        date = self.min_date
-        lastmonth = 0
-        while date <= self.max_date:
-            if lastmonth != date.month:
-                lastmonth = date.month
-                worksheet.write(row - 1, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
-            cf = (
-                self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
-            )
-            worksheet.write_number(row, col, date.day, cf)
-            date = date + td(days=1)
-            col += 1
 
     def generateTitle(self, worksheet):
         row = 0
@@ -45,18 +30,11 @@ class SGStandbyChanges(SGStandbyLimiter):
 
     def generateHeader(self, worksheet):
         row = 1
-        worksheet.write(row, 0, "Name", self.cellFormats["headertxt"])
-        worksheet.write(row, 1, "User", self.cellFormats["headertxt"])
-        worksheet.write(row, 2, "Manager", self.cellFormats["headertxt"])
-        worksheet.write(row, 3, "Comment", self.cellFormats["headertxt"])
-        worksheet.write(row, 4, "StbyH-", self.cellFormats["headernum"])
-        worksheet.write(row, 5, "Work+", self.cellFormats["headernum"])
+        self.generateCommonColumnHeaders(worksheet, row, 0)
+        self.generateColumnHeader(worksheet, row, 3, "Comment", self.cellFormats["headertxt"], 24)
+        for i, headerText in enumerate(["Stby-", "Work+"]):
+            self.generateColumnHeader(worksheet, row, 4 + i, headerText, self.cellFormats["headernum"], 8)
         self.generateHeaderDays(worksheet, row, 6)
-
-        worksheet.set_column(0, 0, width=40)
-        worksheet.set_column(1, 3, width=24)
-        worksheet.set_column(4, 5, width=8)
-        worksheet.set_column(6, 6 + (self.max_date - self.min_date).days, width=6)
 
     def getWorkCellFormat(self, date, hours):
         normhours = 8 if self.is_working_day(date) else 0
@@ -150,7 +128,7 @@ class SGStandbyChanges(SGStandbyLimiter):
     def generateSheet(self, workbook):
         if self.standbylimit:
             self.forceStandbyLimit()
-        worksheet = workbook.add_worksheet("Standby changes")
+        worksheet = workbook.add_worksheet("Payroll (standby changes)")
         self.generateTitle(worksheet)
         self.generateHeader(worksheet)
         self.generateData(worksheet)

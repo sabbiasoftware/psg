@@ -1,14 +1,13 @@
 from datetime import datetime as dt, timedelta as td
-import calendar
 from decimal import Decimal as dec
-from SheetGenerator import SheetGenerator
+from SGStandbyLimiter import SGStandbyLimiter
 from common import HourFormat, HourType, dec_to_number
 from config import Config
 
 
-class SGStandby(SheetGenerator):
+class SGStandby(SGStandbyLimiter):
     def __init__(self, config: Config, cellFormats, managerFromConfig) -> None:
-        super().__init__(config, cellFormats)
+        super().__init__(config, cellFormats, False)
         self.managerFromConfig = managerFromConfig
         self.sumstandby = {}
         self.sumhotline = {}
@@ -43,33 +42,11 @@ class SGStandby(SheetGenerator):
             self.sumhotline[hotline][date] = self.sumhotline[hotline].get(date, 0) + dec(row["Hours"])
 
     def generateHeader(self, worksheet):
-        worksheet.write(5, 0, "Hotline", self.cellFormats["headertxt"])
-        worksheet.write(5, 1, "Name", self.cellFormats["headertxt"])
-        worksheet.write(5, 2, "User", self.cellFormats["headertxt"])
-        worksheet.write(5, 3, "Manager", self.cellFormats["headertxt"])
-        worksheet.write(5, 4, "Project", self.cellFormats["headertxt"])
-        worksheet.write(5, 5, "StbyH", self.cellFormats["headernum"])
-
-        date = self.min_date
-        lastmonth = 0
-        col = 6
-        while date <= self.max_date:
-            if lastmonth != date.month:
-                lastmonth = date.month
-                worksheet.write(4, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
-            cf = (
-                self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
-            )
-            worksheet.write_number(5, col, date.day, cf)
-            date = date + td(days=1)
-            col += 1
-
-        worksheet.set_column(0, 0, width=24)
-        worksheet.set_column(1, 1, width=40)
-        worksheet.set_column(2, 3, width=24)
-        worksheet.set_column(4, 4, width=48)
-        worksheet.set_column(5, 5, width=8)
-        worksheet.set_column(6, col - 1, width=6)
+        self.generateColumnHeader(worksheet, 5, 0, "Hotline", self.cellFormats["headertxt"], 24)
+        self.generateCommonColumnHeaders(worksheet, 5, 1)
+        self.generateColumnHeader(worksheet, 5, 4, "Project", self.cellFormats["headertxt"], 48)
+        self.generateColumnHeader(worksheet, 5, 5, "StbyH", self.cellFormats["headernum"], 8)
+        self.generateHeaderDays(worksheet, 5, 6)
 
     def generateData(self, worksheet):
         row = 6

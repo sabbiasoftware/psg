@@ -21,22 +21,18 @@ for fn in [
     "SGStandby.py",
     "SGStandbyChanges.py",
     "SGStandbyLimiter.py",
+    "SGInfo.py",
     "SheetGenerator.py",
-    "patchfiles.txt"]:
+    "patchfiles.txt",
+]:
     shutil.copy(os.path.join("..", fn), reldir)
 
 os.mkdir(os.path.join(reldir, "cfg"))
 
-for fn in [
-    "holidays.txt",
-    "weekends.txt",
-    "workingdays.txt"]:
+for fn in ["holidays.txt", "weekends.txt", "workingdays.txt"]:
     shutil.copy(os.path.join("..", "cfg", fn), os.path.join(reldir, "cfg"))
 
-for fn in [
-    "projects.txt",
-    "hotlines.txt",
-    "userdata.csv"]:
+for fn in ["projects.txt", "hotlines.txt", "userdata.csv"]:
     Path(os.path.join(reldir, "cfg", fn)).touch()
 
 os.system(f"{zipcmd} a -tzip -r {reldir}.zip {reldir}")

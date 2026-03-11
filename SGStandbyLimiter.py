@@ -1,4 +1,5 @@
-from datetime import datetime as dt
+from datetime import datetime as dt, timedelta as td
+import calendar
 from decimal import Decimal as dec
 from config import Config
 from common import HourType
@@ -102,3 +103,26 @@ class SGStandbyLimiter(SheetGenerator):
                 if month == 13:
                     year += 1
                     month = 1
+
+    def generateColumnHeader(self, worksheet, row, col, headerText, headerFormat, width):
+        worksheet.write(row, col, headerText, headerFormat)
+        worksheet.set_column(col, col, width=width)
+
+    def generateCommonColumnHeaders(self, worksheet, row, col):
+        self.generateColumnHeader(worksheet, row, col + 0, "Email", self.cellFormats["headertxt"], 40)
+        self.generateColumnHeader(worksheet, row, col + 1, "Name", self.cellFormats["headertxt"], 24)
+        self.generateColumnHeader(worksheet, row, col + 2, "Manager", self.cellFormats["headertxt"], 24)
+
+    def generateHeaderDays(self, worksheet, row, col):
+        date = self.min_date
+        lastmonth = 0
+        while date <= self.max_date:
+            if lastmonth != date.month:
+                lastmonth = date.month
+                worksheet.write(row - 1, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
+            cf = (
+                self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
+            )
+            self.generateColumnHeader(worksheet, row, col, date.day, cf, 6)
+            date = date + td(days=1)
+            col += 1
