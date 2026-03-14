@@ -67,7 +67,7 @@ class SGStandbyLimiter(SheetGenerator):
 
         return minusstandby
 
-    def forceStandbyLimit(self):
+    def limitStandby(self):
         for email in self.sumbyuser:
             # avoid importing dateutil.relativedelta for now...
             year = self.min_date.year

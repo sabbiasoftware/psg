@@ -20,12 +20,14 @@ class SGStandbyChanges(SGStandbyLimiter):
             worksheet.write(
                 row,
                 0,
-                f"Forcing monthly standby limit enabled, but monthly limit of {self.MONTHLYSTANDBYLIMIT} was not exceeded",
+                f"Limiting monthly standby limit enabled, but monthly limit of {self.MONTHLYSTANDBYLIMIT} was not exceeded, no changes",
             )
             return
 
         worksheet.write(
-            row, 0, f"Forcing monthly standby limit enabled, monthly limit of {self.MONTHLYSTANDBYLIMIT} was exceeded"
+            row,
+            0,
+            f"Limiting monthly standby limit enabled, monthly limit of {self.MONTHLYSTANDBYLIMIT} was exceeded, changes below",
         )
 
     def generateHeader(self, worksheet):
@@ -127,7 +129,7 @@ class SGStandbyChanges(SGStandbyLimiter):
 
     def generateSheet(self, workbook):
         if self.standbylimit:
-            self.forceStandbyLimit()
+            self.limitStandby()
         worksheet = workbook.add_worksheet("Payroll (standby changes)")
         self.generateTitle(worksheet)
         self.generateHeader(worksheet)

@@ -68,7 +68,7 @@ parser.add_argument(
     action="store_true",
     help="automatically open generated file with Excel/Writer",
 )
-parser.add_argument("-s", "--standbylimit", action="store_true", help="force monthly standby limit")
+parser.add_argument("-s", "--standbylimit", action="store_true", help="limit monthly standby limit")
 parser.add_argument(
     "-m", "--managerfromconfig", action="store_true", help="override manager with manager found in userdata.csv"
 )

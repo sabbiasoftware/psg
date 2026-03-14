@@ -38,18 +38,18 @@ class SGByUserAndProject(SGStandbyLimiter):
         ].get(t, 0) + dec(row["Hours"])
 
     def generateHeader(self, worksheet):
-        self.generateCommonColumnHeaders(worksheet, 5, 0)
-        self.generateColumnHeader(worksheet, 5, 3, "Status", self.cellFormats["headertxt"], 12)
-        self.generateColumnHeader(worksheet, 5, 4, "Job Title", self.cellFormats["headertxt"], 40)
-        self.generateColumnHeader(worksheet, 5, 5, "Grade", self.cellFormats["headertxt"], 12)
-        self.generateColumnHeader(worksheet, 5, 6, "Project", self.cellFormats["headertxt"], 48)
-        self.generateColumnHeader(worksheet, 5, 7, "Activity", self.cellFormats["headertxt"], 12)
+        self.generateCommonColumnHeaders(worksheet, 1, 0)
+        self.generateColumnHeader(worksheet, 1, 3, "Status", self.cellFormats["headertxt"], 12)
+        self.generateColumnHeader(worksheet, 1, 4, "Job Title", self.cellFormats["headertxt"], 40)
+        self.generateColumnHeader(worksheet, 1, 5, "Grade", self.cellFormats["headertxt"], 12)
+        self.generateColumnHeader(worksheet, 1, 6, "Project", self.cellFormats["headertxt"], 48)
+        self.generateColumnHeader(worksheet, 1, 7, "Activity", self.cellFormats["headertxt"], 12)
         for i, headerText in enumerate(["WorkH", "VacaD", "SickD"]):
-            self.generateColumnHeader(worksheet, 5, 8 + i, headerText, self.cellFormats["headernum"], 8)
-        self.generateHeaderDays(worksheet, 5, 11)
+            self.generateColumnHeader(worksheet, 1, 8 + i, headerText, self.cellFormats["headernum"], 8)
+        self.generateHeaderDays(worksheet, 1, 11)
 
     def generateData(self, worksheet):
-        row = 6
+        row = 2
         col = 11
         for email, project, activity in sorted(self.sumbyuserandproj.keys()):
             if self.get_hour_type(project, activity) != HourType.STANDBY:
@@ -107,10 +107,9 @@ class SGByUserAndProject(SGStandbyLimiter):
 
                 row += 1
 
-        worksheet.autofilter(5, 0, row - 1, col - 1)
+        worksheet.autofilter(1, 0, row - 1, col - 1)
 
     def generateSheet(self, workbook):
         worksheet = workbook.add_worksheet("Project details")
-        self.generateTitle(worksheet)
         self.generateHeader(worksheet)
         self.generateData(worksheet)

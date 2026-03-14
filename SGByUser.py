@@ -11,13 +11,13 @@ class SGByUser(SGStandbyLimiter):
         self.managerFromConfig = managerFromConfig
 
     def generateHeader(self, worksheet):
-        self.generateCommonColumnHeaders(worksheet, 5, 0)
+        self.generateCommonColumnHeaders(worksheet, 1, 0)
         for i, headerText in enumerate(["WorkH", "WorkD", "VacaD", "SickD", "OverH", "StbyH"]):
-            self.generateColumnHeader(worksheet, 5, 3 + i, headerText, self.cellFormats["headernum"], 8)
-        self.generateHeaderDays(worksheet, 5, 9)
+            self.generateColumnHeader(worksheet, 1, 3 + i, headerText, self.cellFormats["headernum"], 8)
+        self.generateHeaderDays(worksheet, 1, 9)
 
     def generateData(self, worksheet):
-        row = 6
+        row = 2
         col = 9
         for email in sorted(self.sumbyuser.keys()):
             total_hours = {}
@@ -101,12 +101,11 @@ class SGByUser(SGStandbyLimiter):
 
                 row += 1
 
-        worksheet.autofilter(5, 0, row - 1, col - 1)
+        worksheet.autofilter(1, 0, row - 1, col - 1)
 
     def generateSheet(self, workbook):
         if self.standbylimit:
-            self.forceStandbyLimit()
+            self.limitStandby()
         worksheet = workbook.add_worksheet("Payroll (summary)")
-        self.generateTitle(worksheet)
         self.generateHeader(worksheet)
         self.generateData(worksheet)

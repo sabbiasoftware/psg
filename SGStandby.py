@@ -42,14 +42,14 @@ class SGStandby(SGStandbyLimiter):
             self.sumhotline[hotline][date] = self.sumhotline[hotline].get(date, 0) + dec(row["Hours"])
 
     def generateHeader(self, worksheet):
-        self.generateColumnHeader(worksheet, 5, 0, "Hotline", self.cellFormats["headertxt"], 24)
-        self.generateCommonColumnHeaders(worksheet, 5, 1)
-        self.generateColumnHeader(worksheet, 5, 4, "Project", self.cellFormats["headertxt"], 48)
-        self.generateColumnHeader(worksheet, 5, 5, "StbyH", self.cellFormats["headernum"], 8)
-        self.generateHeaderDays(worksheet, 5, 6)
+        self.generateColumnHeader(worksheet, 1, 0, "Hotline", self.cellFormats["headertxt"], 24)
+        self.generateCommonColumnHeaders(worksheet, 1, 1)
+        self.generateColumnHeader(worksheet, 1, 4, "Project", self.cellFormats["headertxt"], 48)
+        self.generateColumnHeader(worksheet, 1, 5, "StbyH", self.cellFormats["headernum"], 8)
+        self.generateHeaderDays(worksheet, 1, 6)
 
     def generateData(self, worksheet):
-        row = 6
+        row = 2
         col = 5
         for hotline, email, project in sorted(self.sumstandby.keys()):
             date = self.min_date
@@ -90,7 +90,7 @@ class SGStandby(SGStandbyLimiter):
 
             row += 1
 
-        worksheet.autofilter(5, 0, row - 1, col - 1)
+        worksheet.autofilter(1, 0, row - 1, col - 1)
 
         row += 4
         for hotline in sorted(self.sumhotline.keys()):
@@ -118,6 +118,5 @@ class SGStandby(SGStandbyLimiter):
 
     def generateSheet(self, workbook):
         worksheet = workbook.add_worksheet("Standby")
-        self.generateTitle(worksheet)
         self.generateHeader(worksheet)
         self.generateData(worksheet)
