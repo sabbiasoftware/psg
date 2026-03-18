@@ -1,6 +1,9 @@
-from datetime import datetime as dt
-from common import HourType, HourFormat, format_date, format_datetime
+from abc import abstractmethod
+from datetime import datetime as dt, timedelta as td
+import calendar
+from common import HourType, HourFormat
 from config import Config
+
 
 class SheetGenerator:
     def __init__(self, config: Config, cellFormats):
@@ -21,21 +24,19 @@ class SheetGenerator:
             return HourType.WORK
 
     def is_working_day(self, date) -> bool:
-        return (
-            (date.weekday() < 5)
-            and (date not in self.config.Weekends)
-            and (date not in self.config.Holidays)
-        ) or (date in self.config.Workingdays)
+        return ((date.weekday() < 5) and (date not in self.config.Weekends) and (date not in self.config.Holidays)) or (
+            date in self.config.Workingdays
+        )
 
     def get_only_hours(self, hour_type, hours):
         if hour_type not in hours:
             return None
-        if sum( [ hours[ht] for ht in hours if ht != hour_type and ht != HourType.STANDBY ] ) > 0:
+        if sum([hours[ht] for ht in hours if ht != hour_type and ht != HourType.STANDBY]) > 0:
             return None
         return hours[hour_type]
 
     def get_active_hours(self, hours):
-        return sum( [ hours[ht] for ht in hours if ht != HourType.STANDBY ] )
+        return sum([hours[ht] for ht in hours if ht != HourType.STANDBY])
 
     def get_day_cell(self, date, hours):
         w = self.get_only_hours(HourType.WORK, hours)
@@ -82,13 +83,29 @@ class SheetGenerator:
         self.min_date = min(self.min_date, date)
         self.max_date = max(self.max_date, date)
 
-    def generateTitle(self, worksheet):
-        duration = f"{format_date(self.min_date)}-{format_date(self.max_date)}"
-        actual_projects = "All" if len(self.config.Projects) == 0 else ", ".join(self.config.Projects)
-        generated = f"{format_datetime(dt.now())}"
-        worksheet.write(0, 0, f"Duration: {duration}")
-        worksheet.write(1, 0, f"Projects: {actual_projects}")
-        worksheet.write(2, 0, f"Generated: {generated}")
-
+    @abstractmethod
     def generateSheet(self, workbook):
         pass
+
+    def generateColumnHeader(self, worksheet, row, col, headerText, headerFormat, width):
+        worksheet.write(row, col, headerText, headerFormat)
+        worksheet.set_column(col, col, width=width)
+
+    def generateCommonColumnHeaders(self, worksheet, row, col):
+        self.generateColumnHeader(worksheet, row, col + 0, "Email", self.cellFormats["headertxt"], 40)
+        self.generateColumnHeader(worksheet, row, col + 1, "Name", self.cellFormats["headertxt"], 24)
+        self.generateColumnHeader(worksheet, row, col + 2, "Manager", self.cellFormats["headertxt"], 24)
+
+    def generateHeaderDays(self, worksheet, row, col):
+        date = self.min_date
+        lastmonth = 0
+        while date <= self.max_date:
+            if lastmonth != date.month:
+                lastmonth = date.month
+                worksheet.write(row - 1, col, calendar.month_name[date.month], self.cellFormats["headertxt"])
+            cf = (
+                self.cellFormats["headerworkday"] if self.is_working_day(date) else self.cellFormats["headernonworkday"]
+            )
+            self.generateColumnHeader(worksheet, row, col, date.day, cf, 6)
+            date = date + td(days=1)
+            col += 1
