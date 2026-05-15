@@ -125,7 +125,8 @@ class SGStandbyChanges(SGStandbyLimiter):
 
             row += 6
 
-        worksheet.autofilter(1, 0, row - 6, 6 + (self.max_date - self.min_date).days)
+        if len(self.sumstandbydec) > 0:
+            worksheet.autofilter(1, 0, row - 6, 6 + (self.max_date - self.min_date).days)
 
     def generateSheet(self, workbook):
         if self.standbylimit:
