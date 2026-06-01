@@ -6,6 +6,7 @@ config.py
 patch.py
 psg.py
 SGProjectDaily.py
+SGProjectMonthly.py
 SGByUser.py
 SGStandby.py
 SheetGenerator.py

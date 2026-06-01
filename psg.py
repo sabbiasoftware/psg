@@ -15,6 +15,7 @@ import xlsxwriter
 from SGByUser import SGByUser
 from SGStandbyChanges import SGStandbyChanges
 from SGProjectDaily import SGProjectDaily
+from SGProjectMonthly import SGProjectMonthly
 from SGStandby import SGStandby
 from SGInfo import SGInfo
 from config import Config
@@ -123,6 +124,7 @@ sheetGenerators = [
     SGByUser(config, cellFormats, args.standbylimit, args.managerfromconfig),
     SGStandbyChanges(config, cellFormats, args.standbylimit, args.managerfromconfig),
     SGProjectDaily(config, cellFormats, args.managerfromconfig),
+    SGProjectMonthly(config, cellFormats, args.managerfromconfig),
     SGStandby(config, cellFormats, args.managerfromconfig),
     SGInfo(config, cellFormats, False),
 ]
