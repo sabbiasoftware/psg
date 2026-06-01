@@ -17,7 +17,7 @@ for fn in [
     "common.py",
     "config.py",
     "SGByUser.py",
-    "SGByUserAndProject.py",
+    "SGProjectDaily.py",
     "SGStandby.py",
     "SGStandbyChanges.py",
     "SGStandbyLimiter.py",

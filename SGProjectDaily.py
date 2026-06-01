@@ -5,11 +5,11 @@ from common import HourType, dec_to_number
 from config import Config
 
 
-class SGByUserAndProject(SGStandbyLimiter):
+class SGProjectDaily(SGStandbyLimiter):
     def __init__(self, config: Config, cellFormats, managerFromConfig) -> None:
         super().__init__(config, cellFormats, False)
         self.managerFromConfig = managerFromConfig
-        self.sumbyuserandproj = {}
+        self.sumprojectdaily = {}
 
     def loadRow(self, row):
         super().loadRow(row)
@@ -29,11 +29,11 @@ class SGByUserAndProject(SGStandbyLimiter):
         desc = row["Project Description"]
         project = f"{proj} {desc}" if proj != desc else proj
         activity = row["Activity"]
-        if (email, project, activity) not in self.sumbyuserandproj.keys():
-            self.sumbyuserandproj[email, project, activity] = {}
-        if date not in self.sumbyuserandproj[email, project, activity].keys():
-            self.sumbyuserandproj[email, project, activity][date] = {}
-        self.sumbyuserandproj[email, project, activity][date][t] = self.sumbyuserandproj[email, project, activity][
+        if (email, project, activity) not in self.sumprojectdaily.keys():
+            self.sumprojectdaily[email, project, activity] = {}
+        if date not in self.sumprojectdaily[email, project, activity].keys():
+            self.sumprojectdaily[email, project, activity][date] = {}
+        self.sumprojectdaily[email, project, activity][date][t] = self.sumprojectdaily[email, project, activity][
             date
         ].get(t, 0) + dec(row["Hours"])
 
@@ -51,14 +51,14 @@ class SGByUserAndProject(SGStandbyLimiter):
     def generateData(self, worksheet):
         row = 2
         col = 11
-        for email, project, activity in sorted(self.sumbyuserandproj.keys()):
+        for email, project, activity in sorted(self.sumprojectdaily.keys()):
             if self.get_hour_type(project, activity) != HourType.STANDBY:
                 total_hours = {}
                 for ht in HourType:
                     total_hours[ht] = sum(
                         [
-                            self.sumbyuserandproj[email, project, activity][date].get(ht, 0)
-                            for date in self.sumbyuserandproj[email, project, activity]
+                            self.sumprojectdaily[email, project, activity][date].get(ht, 0)
+                            for date in self.sumprojectdaily[email, project, activity]
                         ]
                     )
 
@@ -70,8 +70,8 @@ class SGByUserAndProject(SGStandbyLimiter):
                 col = 11
                 while date <= self.max_date:
                     hours = {}
-                    if date in self.sumbyuserandproj[email, project, activity].keys():
-                        hours = self.sumbyuserandproj[email, project, activity][date]
+                    if date in self.sumprojectdaily[email, project, activity].keys():
+                        hours = self.sumprojectdaily[email, project, activity][date]
 
                     value, format = self.get_day_cell(date, hours)
 

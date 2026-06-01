@@ -5,7 +5,7 @@ common.py
 config.py
 patch.py
 psg.py
-SGByUserAndProject.py
+SGProjectDaily.py
 SGByUser.py
 SGStandby.py
 SheetGenerator.py
