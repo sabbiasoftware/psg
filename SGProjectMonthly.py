@@ -36,6 +36,17 @@ class SGProjectMonthly(SGStandbyLimiter):
             date
         ].get(t, 0) + dec(row["Hours"])
 
+    def _count_months(self):
+        num = 0
+        date = self.min_date
+        lastmonth = None
+        while date <= self.max_date:
+            if lastmonth != date.month:
+                lastmonth = date.month
+                num += 1
+            date += td(days=1)
+        return num
+
     def generateHeader(self, worksheet):
         self.generateCommonColumnHeaders(worksheet, 1, 0)
         self.generateColumnHeader(worksheet, 1, 3, "Status", self.cellFormats["headertxt"], 12)
@@ -47,7 +58,21 @@ class SGProjectMonthly(SGStandbyLimiter):
         for i, headerText in enumerate(["WorkH", "VacaD", "SickD"]):
             self.generateColumnHeader(worksheet, 1, 9 + i, headerText, self.cellFormats["headernum"], 8)
 
+        num_months = self._count_months()
+
+        worksheet.write(0, 12, "Hours", self.cellFormats["headertxt"])
         col = 12
+        date = self.min_date
+        lastmonth = None
+        while date <= self.max_date:
+            if lastmonth != date.month:
+                lastmonth = date.month
+                self.generateColumnHeader(worksheet, 1, col, date.strftime("%Y-%m"), self.cellFormats["headernum"], 10)
+                col += 1
+            date = date + td(days=1)
+
+        worksheet.write(0, 12 + num_months, "Cost", self.cellFormats["headertxt"])
+        col = 12 + num_months
         date = self.min_date
         lastmonth = None
         while date <= self.max_date:
@@ -60,6 +85,7 @@ class SGProjectMonthly(SGStandbyLimiter):
     def generateData(self, worksheet):
         row = 2
         col = 12
+        num_months = self._count_months()
         for email, project, activity in sorted(self.sumprojectmonthly.keys()):
             if self.get_hour_type(project, activity) != HourType.STANDBY:
                 total_hours = {}
@@ -73,6 +99,32 @@ class SGProjectMonthly(SGStandbyLimiter):
 
                 if len(self.config.Projects) > 0 and total_hours[HourType.WORK] == 0:
                     continue
+
+                manager = self.approvers[email]
+                if self.managerFromConfig:
+                    if email in self.config.UserData.keys():
+                        manager = self.config.UserData[email]["Reporting to"]
+
+                grade = ""
+                if email in self.config.UserData.keys():
+                    grade = self.config.UserData[email].get("Global Grade", "")
+                    worksheet.write(row, 3, self.config.UserData[email].get("Employment Status", ""))
+                    worksheet.write(row, 4, self.config.UserData[email].get("Job Title", ""))
+                    worksheet.write(row, 5, grade)
+                rate_str = self.config.Rates.get(grade, "")
+                rate_val = dec(rate_str) if rate_str else None
+
+                worksheet.write(row, 0, email, self.cellFormats["datatxt"])
+                worksheet.write(row, 1, self.users[email])
+                worksheet.write(row, 2, manager)
+                worksheet.write(row, 6, rate_str, self.cellFormats["datanum"])
+                worksheet.write(row, 7, project)
+                worksheet.write(row, 8, activity)
+                worksheet.write_number(row, 9, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
+                worksheet.write_number(
+                    row, 10, int(total_hours[HourType.VACATION] // dec(8)), self.cellFormats["datanum"]
+                )
+                worksheet.write_number(row, 11, int(total_hours[HourType.SICK] // dec(8)), self.cellFormats["datanum"])
 
                 col = 12
                 date = self.min_date
@@ -109,30 +161,25 @@ class SGProjectMonthly(SGStandbyLimiter):
                         col += 1
                     date = date + td(days=1)
 
-                manager = self.approvers[email]
-                if self.managerFromConfig:
-                    if email in self.config.UserData.keys():
-                        manager = self.config.UserData[email]["Reporting to"]
-
-                worksheet.write(row, 0, email, self.cellFormats["datatxt"])
-                worksheet.write(row, 1, self.users[email])
-                worksheet.write(row, 2, manager)
-                if email in self.config.UserData.keys():
-                    worksheet.write(row, 3, self.config.UserData[email].get("Employment Status", ""))
-                    worksheet.write(row, 4, self.config.UserData[email].get("Job Title", ""))
-                    grade = self.config.UserData[email].get("Global Grade", "")
-                    worksheet.write(row, 5, grade)
-                else:
-                    grade = ""
-                rate = self.config.Rates.get(grade, "")
-                worksheet.write(row, 6, rate, self.cellFormats["datanum"])
-                worksheet.write(row, 7, project)
-                worksheet.write(row, 8, activity)
-                worksheet.write_number(row, 9, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
-                worksheet.write_number(
-                    row, 10, int(total_hours[HourType.VACATION] // dec(8)), self.cellFormats["datanum"]
-                )
-                worksheet.write_number(row, 11, int(total_hours[HourType.SICK] // dec(8)), self.cellFormats["datanum"])
+                col = 12 + num_months
+                date = self.min_date
+                lastmonth = None
+                while date <= self.max_date:
+                    if lastmonth != date.month:
+                        lastmonth = date.month
+                        month_hours = {}
+                        for d in self.sumprojectmonthly[email, project, activity]:
+                            if d.year == date.year and d.month == date.month:
+                                for ht, hrs in self.sumprojectmonthly[email, project, activity][d].items():
+                                    month_hours[ht] = month_hours.get(ht, 0) + hrs
+                        total_hours_for_cost = self.get_active_hours(month_hours)
+                        if rate_val is not None and total_hours_for_cost > 0:
+                            cost = total_hours_for_cost * rate_val
+                            worksheet.write_number(row, col, dec_to_number(cost), self.cellFormats["datausd"])
+                        else:
+                            worksheet.write(row, col, "", self.cellFormats["datausd"])
+                        col += 1
+                    date = date + td(days=1)
 
                 row += 1
 

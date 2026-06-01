@@ -107,6 +107,7 @@ cellFormats = {
     "headernum": workbook.add_format({"align": "right", "bold": "true"}),
     "datatxt": workbook.add_format({"align": "left"}),
     "datanum": workbook.add_format({"align": "right", "indent": 1}),
+    "datausd": workbook.add_format({"align": "right", "indent": 1, "num_format": "#,##0.00"}),
     "hourFormats": {
         HourFormat.WORK: workbook.add_format({"align": "center", "bg_color": "#90ee90"}),
         HourFormat.UNDER: workbook.add_format({"align": "center", "bg_color": "#9acd32"}),
