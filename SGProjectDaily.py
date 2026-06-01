@@ -110,6 +110,6 @@ class SGProjectDaily(SGStandbyLimiter):
         worksheet.autofilter(1, 0, row - 1, col - 1)
 
     def generateSheet(self, workbook):
-        worksheet = workbook.add_worksheet("Project details")
+        worksheet = workbook.add_worksheet("Project daily")
         self.generateHeader(worksheet)
         self.generateData(worksheet)

@@ -41,12 +41,13 @@ class SGProjectMonthly(SGStandbyLimiter):
         self.generateColumnHeader(worksheet, 1, 3, "Status", self.cellFormats["headertxt"], 12)
         self.generateColumnHeader(worksheet, 1, 4, "Job Title", self.cellFormats["headertxt"], 40)
         self.generateColumnHeader(worksheet, 1, 5, "Grade", self.cellFormats["headertxt"], 12)
-        self.generateColumnHeader(worksheet, 1, 6, "Project", self.cellFormats["headertxt"], 48)
-        self.generateColumnHeader(worksheet, 1, 7, "Activity", self.cellFormats["headertxt"], 12)
+        self.generateColumnHeader(worksheet, 1, 6, "Rate", self.cellFormats["headernum"], 10)
+        self.generateColumnHeader(worksheet, 1, 7, "Project", self.cellFormats["headertxt"], 48)
+        self.generateColumnHeader(worksheet, 1, 8, "Activity", self.cellFormats["headertxt"], 12)
         for i, headerText in enumerate(["WorkH", "VacaD", "SickD"]):
-            self.generateColumnHeader(worksheet, 1, 8 + i, headerText, self.cellFormats["headernum"], 8)
+            self.generateColumnHeader(worksheet, 1, 9 + i, headerText, self.cellFormats["headernum"], 8)
 
-        col = 11
+        col = 12
         date = self.min_date
         lastmonth = None
         while date <= self.max_date:
@@ -58,7 +59,7 @@ class SGProjectMonthly(SGStandbyLimiter):
 
     def generateData(self, worksheet):
         row = 2
-        col = 11
+        col = 12
         for email, project, activity in sorted(self.sumprojectmonthly.keys()):
             if self.get_hour_type(project, activity) != HourType.STANDBY:
                 total_hours = {}
@@ -73,7 +74,7 @@ class SGProjectMonthly(SGStandbyLimiter):
                 if len(self.config.Projects) > 0 and total_hours[HourType.WORK] == 0:
                     continue
 
-                col = 11
+                col = 12
                 date = self.min_date
                 lastmonth = None
                 while date <= self.max_date:
@@ -119,14 +120,19 @@ class SGProjectMonthly(SGStandbyLimiter):
                 if email in self.config.UserData.keys():
                     worksheet.write(row, 3, self.config.UserData[email].get("Employment Status", ""))
                     worksheet.write(row, 4, self.config.UserData[email].get("Job Title", ""))
-                    worksheet.write(row, 5, self.config.UserData[email].get("Global Grade", ""))
-                worksheet.write(row, 6, project)
-                worksheet.write(row, 7, activity)
-                worksheet.write_number(row, 8, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
+                    grade = self.config.UserData[email].get("Global Grade", "")
+                    worksheet.write(row, 5, grade)
+                else:
+                    grade = ""
+                rate = self.config.Rates.get(grade, "")
+                worksheet.write(row, 6, rate, self.cellFormats["datanum"])
+                worksheet.write(row, 7, project)
+                worksheet.write(row, 8, activity)
+                worksheet.write_number(row, 9, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
                 worksheet.write_number(
-                    row, 9, int(total_hours[HourType.VACATION] // dec(8)), self.cellFormats["datanum"]
+                    row, 10, int(total_hours[HourType.VACATION] // dec(8)), self.cellFormats["datanum"]
                 )
-                worksheet.write_number(row, 10, int(total_hours[HourType.SICK] // dec(8)), self.cellFormats["datanum"])
+                worksheet.write_number(row, 11, int(total_hours[HourType.SICK] // dec(8)), self.cellFormats["datanum"])
 
                 row += 1
 

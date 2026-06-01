@@ -2,6 +2,7 @@ import os
 import csv
 from common import read_strings, read_dates, HourType
 
+
 class Config:
     def __init__(self):
         self.Users = read_strings(os.path.join("cfg", "users.txt"), do_strip=True, do_lower=True)
@@ -14,7 +15,7 @@ class Config:
             "Vacations": HourType.VACATION,
             "Sick Leave (H)": HourType.SICK,
             "Medical Leave": HourType.SICK,
-            "Public Holiday": HourType.HOLIDAY
+            "Public Holiday": HourType.HOLIDAY,
         }
 
         self.Hotlines = {}
@@ -30,6 +31,17 @@ class Config:
                 if email not in self.Hotlines.keys():
                     self.Hotlines[email] = hotline
 
+        self.Rates = {}
+        fnrates = os.path.join("cfg", "rates.csv")
+        if os.path.exists(fnrates):
+            with open(fnrates, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    grade = row["Grade"].strip()
+                    rate = row["Rate"].strip()
+                    if grade:
+                        self.Rates[grade] = rate
+
         self.UserData = {}
         fnuserdata = os.path.join("cfg", "userdata.csv")
         if os.path.exists(fnuserdata):
@@ -43,5 +55,5 @@ class Config:
                         "Employment Status": row["Employment Status"],
                         "Reporting to": row["Reporting to"],
                         "Job Title": row["Job Title"],
-                        "Global Grade": row["Global Grade"]
+                        "Global Grade": row["Global Grade"],
                     }

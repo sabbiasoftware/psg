@@ -3,6 +3,7 @@ from decimal import Decimal as dec
 from SGStandbyLimiter import SGStandbyLimiter
 from common import HourFormat, HourType, dec_to_number
 from config import Config
+import config
 
 
 class SGStandby(SGStandbyLimiter):
@@ -86,6 +87,7 @@ class SGStandby(SGStandbyLimiter):
                         for date in self.sumstandby[hotline, email, project].keys()
                     ]
                 ),
+                self.cellFormats["datanum"],
             )
 
             row += 1
@@ -112,7 +114,12 @@ class SGStandby(SGStandbyLimiter):
                 col += 1
 
             worksheet.write(row, 0, hotline)
-            worksheet.write(row, 5, sum([self.sumhotline[hotline][date] for date in self.sumhotline[hotline].keys()]))
+            worksheet.write(
+                row,
+                5,
+                sum([self.sumhotline[hotline][date] for date in self.sumhotline[hotline].keys()]),
+                self.cellFormats["datanum"],
+            )
 
             row += 1
 
