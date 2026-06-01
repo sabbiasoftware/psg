@@ -67,7 +67,7 @@ class SGProjectMonthly(SGStandbyLimiter):
         while date <= self.max_date:
             if lastmonth != date.month:
                 lastmonth = date.month
-                self.generateColumnHeader(worksheet, 1, col, date.strftime("%Y-%m"), self.cellFormats["headernum"], 10)
+                self.generateColumnHeader(worksheet, 1, col, date.strftime("%Y-%m"), self.cellFormats["headertxt"], 10)
                 col += 1
             date = date + td(days=1)
 
@@ -78,7 +78,7 @@ class SGProjectMonthly(SGStandbyLimiter):
         while date <= self.max_date:
             if lastmonth != date.month:
                 lastmonth = date.month
-                self.generateColumnHeader(worksheet, 1, col, date.strftime("%Y-%m"), self.cellFormats["headernum"], 10)
+                self.generateColumnHeader(worksheet, 1, col, date.strftime("%Y-%m"), self.cellFormats["headertxt"], 10)
                 col += 1
             date = date + td(days=1)
 
@@ -117,7 +117,7 @@ class SGProjectMonthly(SGStandbyLimiter):
                 worksheet.write(row, 0, email, self.cellFormats["datatxt"])
                 worksheet.write(row, 1, self.users[email])
                 worksheet.write(row, 2, manager)
-                worksheet.write(row, 6, rate_str, self.cellFormats["datanum"])
+                worksheet.write(row, 6, rate_str, self.cellFormats["datausd"])
                 worksheet.write(row, 7, project)
                 worksheet.write(row, 8, activity)
                 worksheet.write_number(row, 9, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
