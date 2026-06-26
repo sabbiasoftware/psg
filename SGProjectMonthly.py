@@ -117,7 +117,7 @@ class SGProjectMonthly(SGStandbyLimiter):
                 worksheet.write(row, 0, email, self.cellFormats["datatxt"])
                 worksheet.write(row, 1, self.users[email])
                 worksheet.write(row, 2, manager)
-                worksheet.write(row, 6, rate_str, self.cellFormats["datausd"])
+                worksheet.write(row, 6, rate_val, self.cellFormats["datausd"])
                 worksheet.write(row, 7, project)
                 worksheet.write(row, 8, activity)
                 worksheet.write_number(row, 9, int(total_hours[HourType.WORK]), self.cellFormats["datanum"])
