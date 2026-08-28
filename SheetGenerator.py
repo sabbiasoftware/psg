@@ -31,7 +31,7 @@ class SheetGenerator:
     def get_only_hours(self, hour_type, hours):
         if hour_type not in hours:
             return None
-        if sum([hours[ht] for ht in hours if ht != hour_type and ht != HourType.STANDBY]) > 0:
+        if sum([hours[ht] for ht in hours if ht != hour_type and ht != HourType.HOLIDAY and ht != HourType.STANDBY]) > 0:
             return None
         return hours[hour_type]
 
