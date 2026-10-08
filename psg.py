@@ -163,8 +163,11 @@ except Exception as exc:
 for g in sheetGenerators:
     g.generateSheet(workbook)
 
-workbook.close()
-print(f"Saved: {os.path.join(os.getcwd(), str(workbook.filename))}")
+try:
+    workbook.close()
+    print(f"Saved: {os.path.join(os.getcwd(), str(workbook.filename))}")
+except Exception:
+    print(f"Workbook cannot be saved, previous version still open?")
 
 if args.autoopen:
     if sys.platform == "win32":
