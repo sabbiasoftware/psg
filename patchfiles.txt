@@ -4,12 +4,12 @@ psg.py
 common.py
 config.py
 patch.py
-psg.py
 SGProjectDaily.py
 SGProjectMonthly.py
 SGWorkMonthly.py
 SGByUser.py
 SGStandby.py
+SGStandbyChanges.py
 SheetGenerator.py
 SGStandbyLimiter.py
 SGInfo.py

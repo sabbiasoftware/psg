@@ -167,6 +167,6 @@ class SGWorkMonthly(SheetGenerator):
         worksheet.autofilter(1, 0, row - 1, col - 1)
 
     def generateSheet(self, workbook):
-        worksheet = workbook.add_worksheet("SGWorkMonthly")
+        worksheet = workbook.add_worksheet("Work monthly")
         self.generateHeader(worksheet)
         self.generateData(worksheet)

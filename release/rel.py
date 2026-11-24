@@ -19,6 +19,7 @@ for fn in [
     "SGByUser.py",
     "SGProjectDaily.py",
     "SGProjectMonthly.py",
+    "SGWorkMonthly.py",
     "SGStandby.py",
     "SGStandbyChanges.py",
     "SGStandbyLimiter.py",
