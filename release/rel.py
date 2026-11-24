@@ -23,6 +23,7 @@ for fn in [
     "SGStandby.py",
     "SGStandbyChanges.py",
     "SGStandbyLimiter.py",
+    "SGWorkMonthly.py",
     "SGInfo.py",
     "SheetGenerator.py",
     "patchfiles.txt",
